@@ -41,7 +41,7 @@
 		on:keydown={handleKeydown}
 		role="button"
 		tabindex="-1"
-	/>
+	></div>
 
 	<!-- Modal -->
 	<div

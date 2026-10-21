@@ -17,16 +17,18 @@ export const load = (async ({ locals }) => {
 	const mcEndpoint = new URL(CONFIG.mcEndpoint || session.mcEndpoint);
 	const internalMcEndpoint = new URL(CONFIG.internalMcEndpoint || session.mcEndpoint);
 
-	logger.debug('[+layout.server] mcEndpoint (browser):', mcEndpoint.href);
-	logger.debug('[+layout.server] internalMcEndpoint (server):', internalMcEndpoint.href);
+	logger.debug(`[+layout.server] mcEndpoint (browser): ${mcEndpoint.href}`);
+	logger.debug(`[+layout.server] internalMcEndpoint (server): ${internalMcEndpoint.href}`);
 
 	const username = await getSshUser(fetch, internalMcEndpoint, session.token)
 		.then((sshUser) => {
-			logger.debug('[+layout.server] getSshUser returned:', sshUser);
+			logger.debug(`[+layout.server] getSshUser returned: ${JSON.stringify(sshUser)}`);
 			return sshUser?.username ?? '';
 		})
 		.catch((e) => {
-			logger.error('[+layout.server] getSshUser failed:', e);
+			logger.error(
+				`[+layout.server] getSshUser failed: ${e instanceof Error ? e.message : String(e)}`
+			);
 			return '';
 		});
 
@@ -46,7 +48,9 @@ export const load = (async ({ locals }) => {
 				logger.debug('[+layout.server] Generated oinit credentials');
 			}
 		} catch (e) {
-			logger.error('[+layout.server] Failed to generate oinit credentials:', e);
+			logger.error(
+				`[+layout.server] Failed to generate oinit credentials: ${e instanceof Error ? e.message : String(e)}`
+			);
 		}
 	}
 

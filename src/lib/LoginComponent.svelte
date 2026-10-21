@@ -273,7 +273,7 @@
 
 			let op = providers[normalizedOp];
 			logger.debug('[LoginComponent] handleLogin: fetching OP info for', selectedOp);
-			let opInfo = await loadOpInfo(fetch, mcEndpoint, selectedOp);
+			let opInfo = await loadOpInfo(fetch, mcEndpoint, normalizedOp);
 			logger.debug('[LoginComponent] handleLogin: opInfo =', JSON.stringify(opInfo));
 			let callbackUrl =
 				'/redir' +

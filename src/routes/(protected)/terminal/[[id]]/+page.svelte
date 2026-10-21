@@ -91,9 +91,9 @@
 
 	function downloadSshCredentials() {
 		const hostname = data.sshHostname;
-		downloadFile(data.oinitPrivateKey, `id_ed25519_${hostname}`);
+		downloadFile(data.oinitPrivateKey!, `id_ed25519_${hostname}`);
 		setTimeout(() => {
-			downloadFile(data.oinitCertificate, `id_ed25519_${hostname}-cert.pub`);
+			downloadFile(data.oinitCertificate!, `id_ed25519_${hostname}-cert.pub`);
 		}, 100);
 	}
 
@@ -184,6 +184,7 @@
 			{/each}
 			<button
 				class="px-2 hover:text-mc-orange leading-none"
+				aria-label="New terminal"
 				on:click={addTerminal}
 				hidden={terminals.length == 0}
 				><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
@@ -293,7 +294,7 @@
 									<span class="font-mono">chmod 600 ~/.ssh/id_ed25519_{data.sshHostname}</span>
 								</span>
 								<button
-									on:click={() => copyToClipboard(data.oinitPrivateKey, 'key')}
+									on:click={() => copyToClipboard(data.oinitPrivateKey!, 'key')}
 									class="flex items-center gap-1 text-mc-gray dark:text-gray-300 hover:text-mc-blue-500"
 								>
 									<span class="text-sm">Private Key</span>
@@ -303,7 +304,7 @@
 									/>
 								</button>
 								<button
-									on:click={() => copyToClipboard(data.oinitCertificate, 'cert')}
+									on:click={() => copyToClipboard(data.oinitCertificate!, 'cert')}
 									class="flex items-center gap-1 text-mc-gray dark:text-gray-300 hover:text-mc-blue-500"
 								>
 									<span class="text-sm">Certificate</span>

@@ -103,7 +103,7 @@
 				on:change={handleCustomise}
 				class="sr-only peer"
 			/>
-			<div class="checkbox peer" />
+			<div class="checkbox peer"></div>
 		</label>
 	</div>
 </div>

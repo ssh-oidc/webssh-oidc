@@ -143,7 +143,7 @@
 	class="rounded overflow-hidden bg-black shadow-md shadow-neutral-400 p-2 h-full"
 	bind:this={termDiv}
 	use:resizeAction={onResize}
-/>
+></div>
 
 <style lang="postcss">
 	:global(.xterm .xterm-viewport) {

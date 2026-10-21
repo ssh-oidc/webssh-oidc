@@ -1,6 +1,6 @@
 # Developing
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Requires Node.js 22.12 or newer. Install dependencies with `npm install`, then start a development server:
 
 ```bash
 npm run dev

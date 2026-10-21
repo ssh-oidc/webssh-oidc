@@ -92,7 +92,7 @@
 		<div class="flex items-center gap-4">
 			<button
 				on:click={() =>
-					downloadFile(data.oinitPrivateKey, `id_ed25519_${loginParams.sshInternalHost.hostname}`)}
+					downloadFile(data.oinitPrivateKey!, `id_ed25519_${loginParams.sshInternalHost.hostname}`)}
 				class="bg-mc-blue-500 hover:bg-mc-blue-600 text-white font-semibold py-2 px-4 rounded whitespace-nowrap"
 			>
 				Download Private Key
@@ -111,7 +111,7 @@
 			<button
 				on:click={() =>
 					downloadFile(
-						data.oinitCertificate,
+						data.oinitCertificate!,
 						`id_ed25519_${loginParams.sshInternalHost.hostname}-cert.pub`
 					)}
 				class="bg-mc-blue-500 hover:bg-mc-blue-600 text-white font-semibold py-2 px-4 rounded whitespace-nowrap"
@@ -161,7 +161,7 @@
 				label="SSH commands with oinit:"
 				id="oinitSshCmd"
 				open={true}
-				value={`oinit add ${loginParams.sshInternalHost.hostname}       # Tell oinit that ${loginParams.sshInternalHost.hosname} is under oinit control (only needed once)
+				value={`oinit add ${loginParams.sshInternalHost.hostname}       # Tell oinit that ${loginParams.sshInternalHost.hostname} is under oinit control (only needed once)
 ssh -p ${loginParams.sshInternalHost.port} ${loginParams.sshInternalHost.hostname}`}
 			/>
 		</li>
