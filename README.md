@@ -9,7 +9,6 @@ npm run dev
 npm run dev -- --open
 ```
 
-
 ## Building
 
 To create a production version of your app:
@@ -58,6 +57,7 @@ List of supported providers and their corresponding ids:
 - `didmos` for `https://auth.didmos.nfdi-aai.de`
 - `fels` for https://fels.scc.kit.edu/oidc/realms/fels`
 - `myaccessid` for `https://proxy.myaccessid.org`
+
 <!-- https://keycloak.sso.gwdg.de/auth/realms/academiccloud -->
 <!-- https://login.aai.lifescience-ri.eu/oidc -->
 

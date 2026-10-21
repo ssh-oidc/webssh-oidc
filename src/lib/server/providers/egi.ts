@@ -42,8 +42,7 @@ export default function Egi<P extends EgiProfile>(options: OAuthUserConfig<P>): 
 		issuer: 'https://aai.egi.eu/auth/realms/egi',
 		authorization: {
 			params: {
-				scope:
-					'openid profile email entitlements voperson_external_affiliation voperson_id'
+				scope: 'openid profile email entitlements voperson_external_affiliation voperson_id'
 			}
 		},
 		checks: ['pkce', 'state'],

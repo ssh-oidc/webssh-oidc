@@ -8,7 +8,7 @@ import logger from '$lib/server/logger';
 export const { handle, signIn, signOut } = SvelteKitAuth({
 	trustHost: true,
 	debug: process.env.LOG_LEVEL === 'debug',
-    useSecureCookies: process.env.NODE_ENV === 'production',
+	useSecureCookies: process.env.NODE_ENV === 'production',
 	providers: providers,
 	logger: {
 		error(error: Error) {
@@ -20,7 +20,8 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 				// { err: OriginalError, ...OriginalError.cause, ...errorOptions }
 				if (cause.err instanceof Error) {
 					logger.error(`[auth.js]   cause: ${cause.err.name}: ${cause.err.message}`);
-					if ('code' in cause.err) logger.error(`[auth.js]   error code: ${(cause.err as any).code}`);
+					if ('code' in cause.err)
+						logger.error(`[auth.js]   error code: ${(cause.err as any).code}`);
 				}
 				// For issuer mismatch errors, these are flattened from OperationProcessingError.cause
 				if (cause.expected) logger.error(`[auth.js]   expected issuer: ${cause.expected}`);
@@ -96,6 +97,7 @@ declare module '@auth/core/types' {
 		expiresAt: number;
 		accessToken: string;
 		profile: { [key: string]: string | number | boolean | string[] };
+		// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 		userinfo: { [key: string]: string | number | boolean | string[] } | {};
 	}
 }

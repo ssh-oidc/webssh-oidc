@@ -1,24 +1,30 @@
 <script lang="ts">
 	import '../app.css';
 	import Icon from '@iconify/svelte';
+	import { resolve } from '$app/paths';
 	import { uiBlock } from '$lib/stores';
 </script>
 
-<div class="relative grid grid-rows-[1fr] h-fit min-h-full w-screen sm:w-4/5 mx-auto pb-14 pt-24 dark:text-gray-200">
+<div
+	class="relative grid grid-rows-[1fr] h-fit min-h-full w-screen sm:w-4/5 mx-auto pb-14 pt-24 dark:text-gray-200"
+>
 	<slot />
 
-	<div class="absolute bottom-0 left-0 right-0 h-10 text-center text-xs text-mc-blue dark:text-mc-blue-200">
+	<div
+		class="absolute bottom-0 left-0 right-0 h-10 text-center text-xs text-mc-blue dark:text-mc-blue-200"
+	>
 		<p>
-			<a href="/privacy" target="_blank"> Privacy Policy </a>
-            &nbsp;|&nbsp;
+			<a href={resolve('/privacy')} target="_blank"> Privacy Policy </a>
+			&nbsp;|&nbsp;
 			<a href="https://github.com/dianagudu/webssh-oidc" target="_blank">
 				<Icon icon="mdi:github" class="inline" /> Source
 			</a>
-            &nbsp;|&nbsp;
+			&nbsp;|&nbsp;
 			<a href="mailto:m-contact@lists.kit.edu"
-				><Icon icon="mdi:at" class="inline" /> Developer Contact</a>
-            &nbsp;|&nbsp;
-            <a href="https://ssh-oidc-doc.data.kit.edu" target="_blank">Documentation</a>
+				><Icon icon="mdi:at" class="inline" /> Developer Contact</a
+			>
+			&nbsp;|&nbsp;
+			<a href="https://ssh-oidc-doc.data.kit.edu" target="_blank">Documentation</a>
 		</p>
 	</div>
 

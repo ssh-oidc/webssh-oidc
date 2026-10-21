@@ -2,7 +2,7 @@ import type { PageServerLoad } from './$types';
 
 import { redirect } from '@sveltejs/kit';
 
-import { createUserSession, sessionStore } from '$lib/server/sessions';
+import { createUserSession } from '$lib/server/sessions';
 import logger from '$lib/server/logger';
 
 export const load = (async (e) => {
@@ -13,12 +13,12 @@ export const load = (async (e) => {
 		sshPort: Number(e.url.searchParams.get('sshPort') || 22)
 	};
 
-     logger.debug('[redir] Received callback with data:', {
-         hasToken: !!data.token,
-         mcEndpoint: data.mcEndpoint,
-         sshHostname: data.sshHostname,
-         sshPort: data.sshPort
-     });
+	logger.debug('[redir] Received callback with data:', {
+		hasToken: !!data.token,
+		mcEndpoint: data.mcEndpoint,
+		sshHostname: data.sshHostname,
+		sshPort: data.sshPort
+	});
 
 	if (!data.token || !data.mcEndpoint || !data.sshHostname) {
 		logger.error('[redir] Missing required data, redirecting to login');
@@ -27,15 +27,15 @@ export const load = (async (e) => {
 
 	// Validate that mcEndpoint is a properly formed URL
 	try {
-      const mcUrl = new URL(data.mcEndpoint);
-      logger.debug('[redir] Parsed mcEndpoint URL:', {
-          href: mcUrl.href,
-          hostname: mcUrl.hostname,
-          port: mcUrl.port,
-          pathname: mcUrl.pathname
-      });
+		const mcUrl = new URL(data.mcEndpoint);
+		logger.debug('[redir] Parsed mcEndpoint URL:', {
+			href: mcUrl.href,
+			hostname: mcUrl.hostname,
+			port: mcUrl.port,
+			pathname: mcUrl.pathname
+		});
 	} catch (err) {
-        logger.error('[redir] Invalid mcEndpoint URL:', data.mcEndpoint, err);
+		logger.error('[redir] Invalid mcEndpoint URL:', data.mcEndpoint, err);
 	}
 
 	createUserSession(data.token, data.mcEndpoint, data.sshHostname, data.sshPort);

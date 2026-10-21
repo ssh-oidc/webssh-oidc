@@ -1,9 +1,9 @@
 ---
 include:
-  - "https://codebase.helmholtz.cloud/m-team/tools/ci-voodoo/raw/master/ci-include/pipeline-jobs-publish-to-repo.yml"
+  - 'https://codebase.helmholtz.cloud/m-team/tools/ci-voodoo/raw/master/ci-include/pipeline-jobs-publish-to-repo.yml'
 
 variables:
-  USE_GORELEASER: "true"
+  USE_GORELEASER: 'true'
 
 image: marcvs/build_generic_debian-trixie:latest
 
@@ -36,8 +36,7 @@ build:
       find .
   artifacts:
     paths:
-      - "build/*"
-
+      - 'build/*'
 
 package:
   stage: package
@@ -77,7 +76,7 @@ package:
       .gitlab-ci-scripts/package.sh
   artifacts:
     paths:
-      - "results/*"
+      - 'results/*'
 
 # test:
 #   stage: test

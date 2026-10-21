@@ -1,5 +1,3 @@
-import type { OAuth2Config } from '@auth/core/providers';
-import type { Profile } from '@auth/core/types';
 import Google from '@auth/core/providers/google';
 import DeepHDC from '$lib/server/providers/deephdc';
 import Helmholtz from '$lib/server/providers/helmholtz';
@@ -33,7 +31,6 @@ function withLogo<T extends { style?: unknown }>(provider: T, issuer: string): T
 }
 
 function loadProvider(provider_config: ProviderConfig) {
-
 	const auth = {
 		clientId: provider_config.clientId,
 		clientSecret: provider_config.clientSecret
@@ -41,7 +38,7 @@ function loadProvider(provider_config: ProviderConfig) {
 	const issuer = provider_config.issuer
 		.trim() // remove leading and trailing whitespace
 		.replace(/\/+$/, ''); // remove trailing slashes
-    logger.debug(`Issuer: ${issuer}`);
+	logger.debug(`Issuer: ${issuer}`);
 	switch (issuer) {
 		case 'https://accounts.google.com':
 			return Google(auth);
@@ -56,21 +53,21 @@ function loadProvider(provider_config: ProviderConfig) {
 		case 'https://login-dev.helmholtz.de/oauth2':
 			return HelmholtzDev(auth);
 		case 'https://login.helmholtz.de/oauth2':
-            return Helmholtz(auth);
+			return Helmholtz(auth);
 		case 'https://wlcg.cloud.cnaf.infn.it':
 			return Wlcg(auth);
 		case 'https://proxy.eduteams.org':
 			return eduTEAMS(auth);
 		case 'https://et3.gndev.hexaa.eu':
 			return SimpleSaml(auth);
-        // case 'https://infraproxy.nfdi-aai.dfn.de':
-        //     return NfdiInfra(auth);
-        // case 'https://oidc.scc.kit.edu/auth/realms/kit':
-        //     // return KIT(auth);
-        //     return Generic(provider_config);
+		// case 'https://infraproxy.nfdi-aai.dfn.de':
+		//     return NfdiInfra(auth);
+		// case 'https://oidc.scc.kit.edu/auth/realms/kit':
+		//     // return KIT(auth);
+		//     return Generic(provider_config);
 		default:
 			logger.debug(`Issuer ${issuer} supported via generic provider.`);
-            return Generic(provider_config);
+			return Generic(provider_config);
 	}
 }
 

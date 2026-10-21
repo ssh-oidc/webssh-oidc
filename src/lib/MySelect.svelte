@@ -67,7 +67,7 @@
 			on:click|stopPropagation={handleExpand}
 			on:keydown
 		>
-			{#each Object.values(values || {}) as val}
+			{#each Object.values(values || {}) as val (val)}
 				<!-- svelte-ignore a11y-no-static-element-interactions -->
 				<div
 					class="p-2 cursor-pointer hover:bg-mc-blue-200 hover:text-white"

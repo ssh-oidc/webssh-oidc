@@ -19,7 +19,7 @@
 		logo: generic.logo
 	};
 
-	function selectProvider(e: Event) {
+	function selectProvider() {
 		dispatch('click', provider_issuer);
 	}
 </script>

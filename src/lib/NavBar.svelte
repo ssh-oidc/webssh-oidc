@@ -1,9 +1,10 @@
 <script lang="ts">
 	import logo from '$lib/assets/webssh-oidc-square.png';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 
 	const handleGoHome = () => {
-		goto('/terminal');
+		goto(resolve('/terminal'));
 	};
 </script>
 
@@ -16,7 +17,9 @@
 		<button type="button" id="home" title="Home" on:click={handleGoHome}>
 			<div class="flex items-center space-x-3">
 				<img class="h-10 object-cover" src={logo} alt="webssh-oidc logo" />
-				<h3 class="text-xl text-mc-gray dark:text-gray-200 font-semibold tracking-tight">SSH with OIDC</h3>
+				<h3 class="text-xl text-mc-gray dark:text-gray-200 font-semibold tracking-tight">
+					SSH with OIDC
+				</h3>
 			</div>
 		</button>
 	</div>

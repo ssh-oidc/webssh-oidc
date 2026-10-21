@@ -44,8 +44,7 @@ export default function EgiDev<P extends EgiDevProfile>(
 		issuer: 'https://aai-dev.egi.eu/auth/realms/egi',
 		authorization: {
 			params: {
-				scope:
-					'openid profile email entitlements voperson_external_affiliation voperson_id'
+				scope: 'openid profile email entitlements voperson_external_affiliation voperson_id'
 			}
 		},
 		checks: ['pkce', 'state'],

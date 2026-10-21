@@ -74,7 +74,15 @@ services:
         condition: service_healthy
     healthcheck:
       test:
-        ['CMD', 'wget', '-q', '-O', '/dev/null', '--no-check-certificate', 'https://motley-cue.localhost']
+        [
+          'CMD',
+          'wget',
+          '-q',
+          '-O',
+          '/dev/null',
+          '--no-check-certificate',
+          'https://motley-cue.localhost'
+        ]
       interval: 30s
       timeout: 10s
       retries: 3

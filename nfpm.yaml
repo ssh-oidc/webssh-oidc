@@ -1,71 +1,71 @@
-name: "webssh-oidc"
-arch: "all"
+name: 'webssh-oidc'
+arch: 'all'
 rpm:
   arch: ia64
-platform: "linux"
+platform: 'linux'
 version_schema: semver
-version: "${VERSION}"
+version: '${VERSION}'
 release: 1
 epoch: 2
-section: "misc"
-priority: "optional"
+section: 'misc'
+priority: 'optional'
 # replaces:
 # - foobar
 provides:
-- webssh-oidc
+  - webssh-oidc
 depends:
-- nodejs
-- openssl
-- envsubst
+  - nodejs
+  - openssl
+  - envsubst
 # recommends:
 # - whatever
 # suggests:
 # - something-else
-maintainer: "Marcus Hardt <hardt@kit.edu>"
+maintainer: 'Marcus Hardt <hardt@kit.edu>'
 description: |
   Use a web browser to ssh into OpenID Connect enabled SSH servers.
   webssh-oidc requires motley-cue and pam-ssh-oidc configured on the serverside.
-vendor: "KIT"
-homepage: "https://github.com/dianagudu/webssh-oidc"
-license: "MIT"
-changelog: "changelog.yml"
+vendor: 'KIT'
+homepage: 'https://github.com/dianagudu/webssh-oidc'
+license: 'MIT'
+changelog: 'changelog.yml'
 contents:
-- src: ./build
-  dst: /usr/lib/webssh-oidc/build
-  type: tree
-- src: ./server.js
-  dst: /usr/lib/webssh-oidc/
-- src: ./config/webssh-oidc.service
-  dst: /usr/lib/systemd/system/webssh-oidc.service
-- src: ./.env.example
-  dst: /etc/webssh-oidc/environment
-  type: config|noreplace
-- src: ./config/default.yml
-  dst: /etc/webssh-oidc/default.yml.example
-  type: config
+  - src: ./build
+    dst: /usr/lib/webssh-oidc/build
+    type: tree
+  - src: ./server.js
+    dst: /usr/lib/webssh-oidc/
+  - src: ./config/webssh-oidc.service
+    dst: /usr/lib/systemd/system/webssh-oidc.service
+  - src: ./.env.example
+    dst: /etc/webssh-oidc/environment
+    type: config|noreplace
+  - src: ./config/default.yml
+    dst: /etc/webssh-oidc/default.yml.example
+    type: config
 scripts:
-  postinstall: "packaging/scripts/postinstall.sh"
-  preremove: "packaging/scripts/preremove.sh"
+  postinstall: 'packaging/scripts/postinstall.sh'
+  preremove: 'packaging/scripts/preremove.sh'
 
 overrides:
   deb:
     # debian needs the copyright file
     contents:
-    - src: ./packaging/copyright
-      dst: /usr/share/doc/webssh-oidc/copyright
-    - src: ./build
-      dst: /usr/lib/webssh-oidc/build
-      type: tree
-    - src: ./server.js
-      dst: /usr/lib/webssh-oidc/
-    - src: ./config/webssh-oidc.service
-      dst: /usr/lib/systemd/system/webssh-oidc.service
-    - src: ./.env.example
-      dst: /etc/webssh-oidc/environment.temp
-      type: config|noreplace
-    - src: ./config/default.yml
-      dst: /etc/webssh-oidc/default.yml.example
-      type: config
+      - src: ./packaging/copyright
+        dst: /usr/share/doc/webssh-oidc/copyright
+      - src: ./build
+        dst: /usr/lib/webssh-oidc/build
+        type: tree
+      - src: ./server.js
+        dst: /usr/lib/webssh-oidc/
+      - src: ./config/webssh-oidc.service
+        dst: /usr/lib/systemd/system/webssh-oidc.service
+      - src: ./.env.example
+        dst: /etc/webssh-oidc/environment.temp
+        type: config|noreplace
+      - src: ./config/default.yml
+        dst: /etc/webssh-oidc/default.yml.example
+        type: config
 # overrides:
 #   rpm:
 #     scripts:

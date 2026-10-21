@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import { hostSchema, resetHost, isValidHost, type Host } from '$lib/types';
+	import { hostSchema, type Host } from '$lib/types';
 	import { z } from 'zod';
 	import MySelect from './MySelect.svelte';
 
@@ -12,14 +12,6 @@
 	export let defaultHost: Host;
 
 	let internalHost: Host = host;
-
-	function unsetErrorStates() {
-		errorStates = {
-			hostname: false,
-			port: false,
-			protocol: false
-		};
-	}
 
 	function setHost(newHost: Host) {
 		if (JSON.stringify(newHost) !== JSON.stringify(host)) {

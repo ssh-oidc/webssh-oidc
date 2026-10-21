@@ -51,7 +51,7 @@ const authcheck = (async ({ event, resolve }) => {
 	}
 
 	if (event.route.id?.startsWith('/(public)/login') && isLoggedIn(event)) {
-        logger.debug('User already logged in. Redirecting to terminal...');
+		logger.debug('User already logged in. Redirecting to terminal...');
 		return redirect(302, '/terminal');
 	}
 
