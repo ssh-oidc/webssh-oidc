@@ -29,13 +29,20 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 					logger.error(`[auth.js]   actual issuer: ${(cause.body as any).issuer}`);
 				}
 				if (cause.provider) logger.error(`[auth.js]   provider: ${cause.provider}`);
+				// OAuthCallbackError flattens the OP's authorization response into cause
+				// (it is a plain object, not an Error), so log those fields explicitly.
+				if (cause.error) logger.error(`[auth.js]   provider error: ${cause.error}`);
+				if (cause.error_description)
+					logger.error(`[auth.js]   error description: ${cause.error_description}`);
+				if (cause.error_uri) logger.error(`[auth.js]   error uri: ${cause.error_uri}`);
+				if (cause.providerId) logger.error(`[auth.js]   provider id: ${cause.providerId}`);
 			}
 		},
 		warn(code: string) {
 			logger.warn(`[auth.js] Warning: ${code}`);
 		},
 		debug(message: string, metadata?: unknown) {
-			logger.debug(`[auth.js] ${message}`, metadata ? JSON.stringify(metadata, null, 2) : '');
+			logger.debug((metadata ?? {}) as Record<string, unknown>, `[auth.js] ${message}`);
 		}
 	},
 	callbacks: {

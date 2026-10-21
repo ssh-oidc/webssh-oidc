@@ -15,6 +15,27 @@ function isLoggedIn({ locals: { session } }: RequestEvent) {
 	return false;
 }
 
+// log OAuth provider errors before Auth.js consumes them, so the actual reason
+// returned by the OP (error/error_description) is visible in the logs
+const logOAuthCallback = (async ({ event, resolve }) => {
+	if (event.url.pathname.startsWith('/auth/callback')) {
+		const params = event.url.searchParams;
+		logger.debug(
+			{
+				error: params.get('error') ?? undefined,
+				error_description: params.get('error_description') ?? undefined,
+				error_uri: params.get('error_uri') ?? undefined,
+				providerId: params.get('provider') ?? undefined,
+				hasCode: params.has('code'),
+				hasState: params.has('state'),
+				iss: params.get('iss') ?? undefined
+			},
+			'[auth] OAuth callback response:'
+		);
+	}
+	return resolve(event);
+}) satisfies Handle;
+
 // hook for checking whether the user is logged in and redirecting to the appropriate endpoint
 const authcheck = (async ({ event, resolve }) => {
 	// get session and set event local session
@@ -45,4 +66,4 @@ const authcheck = (async ({ event, resolve }) => {
 	return await resolve(event);
 }) satisfies Handle;
 
-export const handle = sequence(skauth, authcheck);
+export const handle = sequence(logOAuthCallback, skauth, authcheck);
