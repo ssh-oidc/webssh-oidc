@@ -1,3 +1,4 @@
+// @ts-expect-error sshpk ships without type declarations
 import sshpk from 'sshpk';
 import logger from './logger.js';
 

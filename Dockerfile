@@ -31,6 +31,7 @@ COPY --from=builder /app/node_modules /app/node_modules
 COPY --from=builder /app/package.json /app/package.json
 COPY --from=builder /app/build /app/build
 COPY server.js /app/server.js
+COPY ws-bridge.js /app/ws-bridge.js
 COPY oinit.js /app/oinit.js
 COPY logger.js /app/logger.js
 

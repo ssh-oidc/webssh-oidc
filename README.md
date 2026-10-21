@@ -3,13 +3,12 @@
 Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
 
 ```bash
-Terminal 1: npm run dev
+npm run dev
 
 # or start the server and open the app in a new browser tab
-Terminal 1: npm run dev -- --open
-
-Terminal 2: npm run dev:ws (WebSocket server on port 8445)                                                                        
+npm run dev -- --open
 ```
+
 
 ## Building
 
