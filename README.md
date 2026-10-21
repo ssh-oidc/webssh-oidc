@@ -61,13 +61,17 @@ List of supported providers and their corresponding ids:
 <!-- https://keycloak.sso.gwdg.de/auth/realms/academiccloud -->
 <!-- https://login.aai.lifescience-ri.eu/oidc -->
 
-You can then spin up a container with:
+You can then run the full stack (app + motley-cue + Caddy) with:
 
 ```bash
-docker-compose up
+docker compose -f docker/compose.yaml up -d --build
 ```
 
-Check out the [motley_cue_docker](https://github.com/dianagudu/motley_cue_docker) repository for a complete example with motley-cue and ssh server.
+Or run only the infrastructure in Docker and the app on the host with
+`npm run dev` — see [docker/README.md](docker/README.md) for both workflows,
+remote-VM deployment, and troubleshooting. `docker/` bundles the motley-cue
+image (motley-cue API + sshd + PAM) and the Caddy configuration, so no
+separate repository/compose file is needed.
 
 If you're not using TLS (not recommended, only do this when you're running the code locally), set `NODE_ENV=development` in the `.env` file.
 

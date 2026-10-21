@@ -14,3 +14,6 @@ config/docs/privacy.md
 .vscode/
 CLAUDE.md
 config/default.html
+
+# Remote-VM overrides for the docker/ stack (hostnames)
+docker/.env

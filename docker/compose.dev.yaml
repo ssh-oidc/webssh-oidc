@@ -1,0 +1,9 @@
+# Override for the hybrid development workflow: only Caddy and motley-cue
+# run in Docker, while webssh-oidc runs on the host via `npm run dev`.
+#
+#   docker compose -f docker/compose.yaml -f docker/compose.dev.yaml up -d caddy motley-cue
+#   npm run dev
+services:
+  caddy:
+    environment:
+      WEBSSH_UPSTREAM: host.docker.internal:8444

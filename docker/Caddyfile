@@ -1,0 +1,65 @@
+# Caddy frontend for the webssh-oidc + motley-cue stack.
+#
+# Local mode expects these entries in /etc/hosts:
+#   127.0.0.1 motley-cue.localhost webssh-oidc.localhost
+# and the Caddy local CA to be trusted in the browser (see README.md).
+#
+# Hostnames can be overridden with WEBSSH_HOST / MC_HOST for a remote VM.
+# For a public hostname, replace `tls internal` with automatic HTTPS
+# (delete the `tls internal` line) or a `tls` block with your own
+# certificate; see README.md.
+
+# webssh-oidc application. The upstream is webssh:8444 when the app runs
+# in a container, and host.docker.internal:8444 in dev mode (compose.dev.yaml).
+{$WEBSSH_HOST:webssh-oidc.localhost} {
+	reverse_proxy {$WEBSSH_UPSTREAM:webssh:8444}
+	tls internal
+}
+www.{$WEBSSH_HOST:webssh-oidc.localhost} {
+	redir https://{$WEBSSH_HOST:webssh-oidc.localhost}{uri}
+}
+
+# motley-cue API, used directly by the browser (CORS).
+{$MC_HOST:motley-cue.localhost} {
+	header Access-Control-Allow-Origin *
+	header Access-Control-Allow-Credentials true
+	header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+	header Access-Control-Allow-Headers "Content-Type, Accept, Authorization"
+
+	@options method OPTIONS
+	header @options Access-Control-Allow-Origin *
+	header @options Access-Control-Allow-Credentials true
+	header @options Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+	header @options Access-Control-Allow-Headers "Content-Type, Accept, Authorization"
+	header @options Content-Type "text/plain charset=UTF-8"
+	respond @options "" 204
+
+	reverse_proxy unix//run/motley_cue/motley-cue.sock
+	tls internal
+}
+www.{$MC_HOST:motley-cue.localhost} {
+	redir https://{$MC_HOST:motley-cue.localhost}{uri}
+}
+
+# Plain-HTTP endpoint for server-side calls:
+#   - from the host (npm run dev): http://localhost/motley_cue/
+#   - from containers on the compose network: http://caddy/motley_cue/
+#   - legacy pam_ssh_oidc contract: http://mc_endpoint:8080/verify_user
+# Traffic never leaves the host/docker network, so plain HTTP is fine.
+http://caddy, http://localhost, :8080 {
+	# Same CORS behavior as the HTTPS API vhost, so the browser can use
+	# MC_ENDPOINT=http://localhost/motley_cue/ without trusting the CA.
+	header Access-Control-Allow-Origin *
+	header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+	header Access-Control-Allow-Headers "Content-Type, Accept, Authorization"
+
+	@options method OPTIONS
+	header @options Access-Control-Allow-Origin *
+	header @options Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+	header @options Access-Control-Allow-Headers "Content-Type, Accept, Authorization"
+	header @options Content-Type "text/plain charset=UTF-8"
+	respond @options "" 204
+
+	uri strip_prefix /motley_cue
+	reverse_proxy unix//run/motley_cue/motley-cue.sock
+}
