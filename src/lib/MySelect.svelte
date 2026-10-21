@@ -33,8 +33,7 @@
 	data-error={hasError ? 'true' : undefined}
 	on:click={handleExpand}
 	on:keydown
-	use:clickOutside
-	on:outsideclick={() => (expand = false)}
+	use:clickOutside={() => (expand = false)}
 >
 	<div class="flex flex-row">
 		{#key value}
