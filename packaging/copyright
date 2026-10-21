@@ -1,7 +1,7 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: webssh-oidc
 Upstream-Contact: Diana Gudu <gudu@kit.edu>
-Source: https://github.com/dianagudu/webssh-oidc
+Source: https://github.com/ssh-oidc/webssh-oidc
 
 Files: *
 Copyright: 2017 - 2024 Diana Gudu <gudu@kit.edu>
@@ -9,7 +9,7 @@ License: MIT-License
 
 MIT License
 
-Copyright (c) 2023 Lukas Brocke
+Copyright (c) 2023 Diana Gudu
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

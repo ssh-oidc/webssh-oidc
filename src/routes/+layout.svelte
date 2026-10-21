@@ -16,7 +16,7 @@
 		<p>
 			<a href={resolve('/privacy')} target="_blank"> Privacy Policy </a>
 			&nbsp;|&nbsp;
-			<a href="https://github.com/dianagudu/webssh-oidc" target="_blank">
+			<a href="https://github.com/ssh-oidc/webssh-oidc" target="_blank">
 				<Icon icon="mdi:github" class="inline" /> Source
 			</a>
 			&nbsp;|&nbsp;

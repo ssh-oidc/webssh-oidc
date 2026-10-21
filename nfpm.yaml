@@ -26,7 +26,7 @@ description: |
   Use a web browser to ssh into OpenID Connect enabled SSH servers.
   webssh-oidc requires motley-cue and pam-ssh-oidc configured on the serverside.
 vendor: 'KIT'
-homepage: 'https://github.com/dianagudu/webssh-oidc'
+homepage: 'https://github.com/ssh-oidc/webssh-oidc'
 license: 'MIT'
 changelog: 'changelog.yml'
 contents:
