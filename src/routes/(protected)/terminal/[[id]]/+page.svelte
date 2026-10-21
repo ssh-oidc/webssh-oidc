@@ -1,11 +1,14 @@
 <script lang="ts">
 	import TerminalTab from './TerminalTab.svelte';
+	import Icon from '@iconify/svelte';
 
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types';
 	import { signOut } from '@auth/sveltekit/client';
-	import { errorMessage, uiBlock } from '$lib/stores';
+	import { errorMessage, uiBlock, darkMode } from '$lib/stores';
 	import TerminalComponent from '$lib/TerminalComponent.svelte';
+	import HelpModal from '$lib/HelpModal.svelte';
+	import ProfileModal from '$lib/ProfileModal.svelte';
 
 	import type { APIEndpoints, APIResponses, APIParams } from '../../api/terminal/[action]/+server';
 	import type { TerminalSessionInfo } from '$lib/server/sessions';
@@ -35,15 +38,67 @@
 
 	const loginParams = {
 		wsUrl: data.wsUrl,
-		sshHost: {
+		sshInternalHost: {
 			hostname: data.userSession.sshHostname,
 			port: data.userSession.sshPort
 		},
 		sshUser: data.username,
-		accessToken: data.accessToken
+		accessToken: data.accessToken,
+		oinitPrivateKey: data.oinitPrivateKey,
+		oinitCertificate: data.oinitCertificate
 	};
 
 	let terminals = data.userSession.terminals;
+	let credentialsDrawerOpen = true;
+	let copiedId: string | null = null;
+	let drawerAutoCloseTimer: ReturnType<typeof setTimeout> | null = null;
+	let helpModalOpen = false;
+	let profileModalOpen = false;
+
+	const userName = data.session?.user?.name ?? data.session?.user?.email ?? data.session?.user?.id ?? 'User';
+
+	const sshPortFlag = loginParams.sshInternalHost.port === 22 ? '' : ` -p ${loginParams.sshInternalHost.port}`;
+
+	const helpLoginParams = {
+		accessToken: data.accessToken,
+		mcEndpoint: data.userSession.mcEndpoint,
+		issuer: String(data.session?.profile?.iss ?? ''),
+		sshInternalHost: {
+			hostname: data.userSession.sshHostname,
+			port: data.userSession.sshPort
+		},
+		sshUser: data.username
+	};
+
+	function resetDrawerAutoClose() {
+		if (drawerAutoCloseTimer) clearTimeout(drawerAutoCloseTimer);
+		drawerAutoCloseTimer = setTimeout(() => { credentialsDrawerOpen = false; }, 10000);
+	}
+
+	function downloadFile(content: string, filename: string) {
+		const blob = new Blob([content], { type: 'text/plain' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = filename;
+		a.click();
+		URL.revokeObjectURL(url);
+	}
+
+	function downloadSshCredentials() {
+		const hostname = data.sshHostname;
+		downloadFile(data.oinitPrivateKey, `id_ed25519_${hostname}`);
+		setTimeout(() => {
+			downloadFile(data.oinitCertificate, `id_ed25519_${hostname}-cert.pub`);
+		}, 100);
+	}
+
+	function copyToClipboard(content: string, id: string) {
+		navigator.clipboard.writeText(content).then(() => {
+			copiedId = id;
+			setTimeout(() => { copiedId = null; }, 1000);
+		});
+	}
 
 	onMount(async () => {
 		if (!data.username || data.username === '') {
@@ -60,6 +115,7 @@
 		}
 
 		$uiBlock = false;
+		resetDrawerAutoClose();
 	});
 
 	async function addTerminal() {
@@ -119,8 +175,8 @@
 {#if data.username === ''}
 	<p>Could not get SSH username</p>
 {:else}
-	<div class="grid grid-rows-[auto,1fr] h-[calc(100vh-155px)]">
-		<div class="flex flex-row px-2 gap-0.5 flex-wrap">
+	<div class="grid grid-rows-[auto,1fr,auto] h-[calc(100vh-155px)]">
+		<div class="flex flex-row px-2 gap-0.5 flex-wrap dark:text-gray-300">
 			{#each terminals as tinfo, i}
 				<TerminalTab
 					tabInfo={tinfo}
@@ -145,6 +201,27 @@
 					/></svg
 				></button
 			>
+			<button
+				class="px-2 hover:text-mc-blue-500 leading-none ml-auto"
+				on:click={() => profileModalOpen = true}
+				title="My Profile"
+			>
+				<Icon icon="mdi:account-circle-outline" class="text-2xl" />
+			</button>
+			<button
+				class="px-2 hover:text-mc-blue-500 leading-none"
+				on:click={() => helpModalOpen = true}
+				title="Help - Commandline Login"
+			>
+				<Icon icon="mdi:help-circle-outline" class="text-2xl" />
+			</button>
+			<button
+				class="px-2 hover:text-mc-blue-500 leading-none"
+				on:click={() => darkMode.update(v => !v)}
+				title={$darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+			>
+				<Icon icon={$darkMode ? 'mdi:weather-sunny' : 'mdi:weather-night'} class="text-2xl" />
+			</button>
 		</div>
 		<div class="grid grid-cols-1 grid-rows-1 overflow-hidden">
 			{#each terminals as tinfo, i}
@@ -161,8 +238,104 @@
 				</div>
 			{/each}
 		</div>
+
+		<!-- Credentials Drawer -->
+		{#if data.oinitPrivateKey && data.oinitCertificate}
+			<div class="border-t border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+				<button
+					type="button"
+					on:click={() => credentialsDrawerOpen = !credentialsDrawerOpen}
+					class="flex items-center justify-between w-full text-base font-semibold text-mc-gray dark:text-gray-200 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
+				>
+					<span class="text-mc-orange">Download Access Token &nbsp;&nbsp;&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp; Download SSH Certificate Credentials</span>
+					<Icon icon={credentialsDrawerOpen ? 'mdi:chevron-down' : 'mdi:chevron-up'} class="text-base" />
+				</button>
+
+				{#if credentialsDrawerOpen}
+					<div class="px-4 py-3 space-y-3 bg-gray-50 dark:bg-gray-800">
+
+						<div class="flex gap-6">
+							<!-- Access Token -->
+							<div class="flex items-center gap-2">
+								<button
+									on:click={() => downloadFile(loginParams.accessToken, 'bt_u1000')}
+									class="bg-mc-blue-500 hover:bg-mc-blue-600 text-white font-semibold py-2 px-4 rounded whitespace-nowrap"
+								>
+									Download Access Token
+								</button>
+								<span class="text-mc-gray dark:text-gray-400 text-xs whitespace-nowrap">
+									Save to: <span class="font-mono">/tmp/bt_u$UID</span>
+								</span>
+								<button
+									on:click={() => copyToClipboard(loginParams.accessToken, 'token')}
+									class="flex items-center gap-1 text-mc-gray dark:text-gray-300 hover:text-mc-blue-500"
+								>
+									<span class="text-sm">Access Token</span>
+									<Icon icon={copiedId === 'token' ? 'mdi:check' : 'mdi:content-copy'} class="text-xl" />
+								</button>
+							</div>
+
+							<!-- SSH Credentials (Private Key + Certificate) -->
+							<div class="flex items-center gap-2">
+								<button
+									on:click={downloadSshCredentials}
+									class="bg-mc-blue-500 hover:bg-mc-blue-600 text-white font-semibold py-2 px-4 rounded whitespace-nowrap"
+								>
+									Download SSH Credentials (Key + Cert)
+								</button>
+								<span class="text-mc-gray dark:text-gray-400 text-xs whitespace-nowrap">
+									Save both to: <span class="font-mono">~/.ssh/</span><br/>
+									<span class="font-mono">chmod 600 ~/.ssh/id_ed25519_{data.sshHostname}</span>
+
+								</span>
+								<button
+									on:click={() => copyToClipboard(data.oinitPrivateKey, 'key')}
+									class="flex items-center gap-1 text-mc-gray dark:text-gray-300 hover:text-mc-blue-500"
+								>
+									<span class="text-sm">Private Key</span>
+									<Icon icon={copiedId === 'key' ? 'mdi:check' : 'mdi:content-copy'} class="text-xl" />
+								</button>
+								<button
+									on:click={() => copyToClipboard(data.oinitCertificate, 'cert')}
+									class="flex items-center gap-1 text-mc-gray dark:text-gray-300 hover:text-mc-blue-500"
+								>
+									<span class="text-sm">Certificate</span>
+									<Icon icon={copiedId === 'cert' ? 'mdi:check' : 'mdi:content-copy'} class="text-xl" />
+								</button>
+							</div>
+						</div>
+						<div class="flex items-center gap-2">
+							<span class="text-mc-gray dark:text-gray-300 text-sm font-medium">SSH command:</span>
+							<code class="font-mono text-sm bg-gray-200 dark:bg-gray-700 dark:text-gray-200 px-2 py-1 rounded">ssh -i ~/.ssh/id_ed25519_{data.sshHostname}{sshPortFlag} oinit@{data.sshHostname}</code>
+							<button
+								on:click={() => copyToClipboard(`ssh -i ~/.ssh/id_ed25519_${data.sshHostname}${sshPortFlag} oinit@${data.sshHostname}`, 'sshCmd')}
+								class="text-mc-gray dark:text-gray-300 hover:text-mc-blue-500"
+							>
+								<Icon icon={copiedId === 'sshCmd' ? 'mdi:check' : 'mdi:content-copy'} class="text-xl" />
+							</button>
+						</div>
+					</div>
+				{/if}
+			</div>
+		{/if}
 	</div>
 {/if}
+
+<HelpModal
+	bind:open={helpModalOpen}
+	loginParams={helpLoginParams}
+	oinitPrivateKey={data.oinitPrivateKey}
+	oinitCertificate={data.oinitCertificate}
+/>
+
+<ProfileModal
+	bind:open={profileModalOpen}
+	userName={userName}
+	sshUser={data.username}
+	issuer={String(data.session?.profile?.iss ?? '')}
+	profile={data.session?.profile}
+	userinfo={data.session?.userinfo}
+/>
 
 <style lang="postcss">
 	.terminal {

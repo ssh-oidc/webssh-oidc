@@ -26,7 +26,7 @@
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
 	id={name}
-	class="relative w-full select-none text-base text-mc-gray px-3 py-2 border border-solid focus:outline-none focus:ring-mc-blue-400 focus:border-mc-blue-400 data-[error]:border-red-500 first:rounded-l-md last:rounded-r-md rounded-none"
+	class="relative w-full select-none text-base text-mc-gray dark:text-gray-200 px-3 py-2 border border-solid dark:border-gray-600 dark:bg-gray-700 focus:outline-none focus:ring-mc-blue-400 focus:border-mc-blue-400 data-[error]:border-red-500 first:rounded-l-md last:rounded-r-md rounded-none"
 	class:disabled
 	class:expanded={!disabled && expand}
 	class:selected={!expand && value}
@@ -64,7 +64,7 @@
 		<!-- svelte-ignore a11y-no-static-element-interactions -->
 		<div
 			transition:slide|global={{ duration: 400 }}
-			class="absolute top-10 left-0 w-full bg-gray-100 text-mc-gray z-10 shadow-md rounded-md overflow-clip"
+			class="absolute top-10 left-0 w-full bg-gray-100 dark:bg-gray-700 text-mc-gray dark:text-gray-200 z-10 shadow-md rounded-md overflow-clip"
 			on:click|stopPropagation={handleExpand}
 			on:keydown
 		>
@@ -92,7 +92,7 @@
 	}
 	.disabled {
 		/* @apply cursor-not-allowed; */
-		@apply opacity-50 bg-gray-100;
+		@apply opacity-50 bg-gray-100 dark:bg-gray-800;
 	}
 	.selected {
 		@apply text-mc-gray;

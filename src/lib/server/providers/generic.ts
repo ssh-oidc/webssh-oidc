@@ -1,4 +1,5 @@
 import type { OAuthUserConfig, OAuthConfig } from '@auth/core/providers';
+import { customFetch } from '@auth/core';
 import logger from '$lib/server/logger';
 
 export interface GenericProfile extends Record<string, any> {
@@ -20,15 +21,21 @@ export interface GenericProfile extends Record<string, any> {
 	preferred_username: string;
 }
 
+// Custom fetch that follows redirects (oauth4webapi uses redirect: 'manual'
+// which breaks OPs that redirect .well-known/openid-configuration)
+const followRedirectsFetch: typeof fetch = (url, options) => {
+	return fetch(url, { ...options, redirect: 'follow' });
+};
+
 export default function Generic<P extends GenericProfile>(
 	options: OAuthUserConfig<P>
 ): OAuthConfig<P> {
-    // logger.debug(`GENERIC provider function called with options: ${JSON.stringify(options, null, 2)}`);
 	const config = {
 		id: 'generic',
 		name: 'Generic Provider',
 		type: 'oidc',
-		checks: ['pkce', 'state'], 
+		checks: ['pkce', 'state'],
+		[customFetch]: followRedirectsFetch,
 		...options
 	};
 	logger.debug(`GENERIC provider final config:${JSON.stringify(config, null, 2)}`);

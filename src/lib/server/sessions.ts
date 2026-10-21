@@ -10,6 +10,9 @@ export interface UserSession {
 	sshPort: number;
 	terminals: TerminalSessionInfo[];
 	creationTime: number;
+	// oinit certificate credentials (generated on demand)
+	oinitPrivateKey?: string;
+	oinitCertificate?: string;
 }
 
 export function createUserSession(

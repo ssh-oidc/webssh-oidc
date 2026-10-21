@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Markdown from '$lib/Markdown.svelte';
 	import { onMount } from 'svelte';
+	import { uiBlock } from '$lib/stores';
 
 	let privacy_path = '/docs/privacy.md';
 	let privacy = 'No privacy policy found.';
@@ -10,6 +11,7 @@
 		if (response.ok) {
 			privacy = await response.text();
 		}
+		$uiBlock = false;
 	});
 </script>
 

@@ -8,8 +8,8 @@
 
 providers:
   - issuer: https://accounts.google.com
-    clientId:  633995513993-rd6e365ntm6p9jv88n93us599kpddm9u.apps.googleusercontent.com
-    clientSecret: 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
+    clientId:  public
+    clientSecret: public
   - issuer: https://login.helmholtz.de/oauth2
     clientId: public-webssh
     clientSecret: public-password

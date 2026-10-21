@@ -25,9 +25,10 @@ default:
 build:
   stage: build
   image:
-    name: node:18-buster-slim
+    name: node:20-trixie-slim
   script:
     - |
+      apt update && apt -y install git python3 build-essential
       npm install
       npm run build
       echo "find"

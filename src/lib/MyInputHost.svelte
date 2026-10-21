@@ -97,10 +97,10 @@
 
 <div class="flex flex-row place-content-between pt-4 pb-2 px-1">
 	<div>
-		<label for="hostname" class="block font-medium text-mc-gray">{title}</label>
+		<label for="hostname" class="block font-medium text-mc-gray dark:text-gray-200">{title}</label>
 	</div>
 	<div class="flex">
-		<span class="ml-3 font-medium text-mc-gray pr-2">customise</span>
+		<span class="ml-3 font-medium text-mc-gray dark:text-gray-300 pr-2">customise</span>
 		<label class="inline-flex relative items-center cursor-pointer">
 			<input
 				type="checkbox"
@@ -175,6 +175,7 @@
 			@apply relative block px-3 py-2 appearance-none rounded-md border focus:z-10 focus:outline-none sm:text-sm;
 			@apply text-mc-gray placeholder-gray-300 focus:border-mc-blue-400 focus:ring-mc-blue-400;
 			@apply disabled:bg-gray-100 disabled:opacity-50;
+			@apply dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-500 dark:disabled:bg-gray-800;
 		}
 
 		input:first-child {

@@ -27,7 +27,14 @@ export const loadOps = async (fetch: Fetch, mcEndpoint: URL) => {
 
 	const response = await fetch(url, { signal: AbortSignal.timeout(ABORT_TIMEOUT) });
 	if (response.ok) {
-		const jsonRaw = await response.json();
+		const text = await response.text();
+		let jsonRaw;
+		try {
+			jsonRaw = JSON.parse(text);
+		} catch (e) {
+			logger.error(`[motley_cue] loadOps: response from ${url} is not valid JSON. Content-Type: ${response.headers.get('content-type')}. Body (first 500 chars): ${text.substring(0, 500)}`);
+			throw new Error(`Response from ${url} is not valid JSON (got ${response.headers.get('content-type')})`);
+		}
 
 		const schema = z.object({
 			supported_OPs: z.array(z.string())
@@ -41,6 +48,8 @@ export const loadOps = async (fetch: Fetch, mcEndpoint: URL) => {
 		const supportedOPs = parsedAPIResponse.data.supported_OPs;
 		return supportedOPs.map((op: string) => op.trim().replace(/\/+$/, ''));
 	} else {
+		const body = await response.text().catch(() => '(could not read body)');
+		logger.error(`[motley_cue] loadOps: ${url} returned ${response.status} ${response.statusText}. Body (first 500 chars): ${body.substring(0, 500)}`);
 		throw new Error(`Could not get info from ${url} (${response.status} ${response.statusText})`);
 	}
 };
@@ -53,7 +62,14 @@ export const loadOpInfo = async (fetch: Fetch, mcEndpoint: URL, opUrl: string) =
 
 	const response = await fetch(url, { signal: AbortSignal.timeout(ABORT_TIMEOUT) });
 	if (response.ok) {
-		const jsonRaw = await response.json();
+		const text = await response.text();
+		let jsonRaw;
+		try {
+			jsonRaw = JSON.parse(text);
+		} catch (e) {
+			logger.error(`[motley_cue] loadOpInfo: response from ${url} is not valid JSON. Content-Type: ${response.headers.get('content-type')}. Body (first 500 chars): ${text.substring(0, 500)}`);
+			throw new Error(`Response from ${url} is not valid JSON for OP ${opUrl} (got ${response.headers.get('content-type')})`);
+		}
 
 		const schema = z.object({
 			scopes: z.array(z.string()),
@@ -67,6 +83,8 @@ export const loadOpInfo = async (fetch: Fetch, mcEndpoint: URL, opUrl: string) =
 
 		return parsedAPIResponse.data;
 	} else {
+		const body = await response.text().catch(() => '(could not read body)');
+		logger.error(`[motley_cue] loadOpInfo: ${url} returned ${response.status} ${response.statusText}. Body (first 500 chars): ${body.substring(0, 500)}`);
 		throw new Error(
 			`Could not get info for OP ${opUrl} (${response.status} ${response.statusText})`
 		);
@@ -86,7 +104,14 @@ export const deployUser = async (fetch: Fetch, mcEndpoint: URL, accessToken: str
 	});
 
 	if (response.ok) {
-		const jsonRaw = await response.json();
+		const text = await response.text();
+		let jsonRaw;
+		try {
+			jsonRaw = JSON.parse(text);
+		} catch (e) {
+			logger.error(`[motley_cue] deployUser: response from ${url} is not valid JSON. Content-Type: ${response.headers.get('content-type')}. Body (first 500 chars): ${text.substring(0, 500)}`);
+			throw new Error(`Response from ${url} is not valid JSON (got ${response.headers.get('content-type')})`);
+		}
 
 		const schema = z.object({
 			state: z.string(),
@@ -102,12 +127,14 @@ export const deployUser = async (fetch: Fetch, mcEndpoint: URL, accessToken: str
 
 		return parsedAPIResponse.data;
 	} else {
+		const body = await response.text().catch(() => '(could not read body)');
+		logger.error(`[motley_cue] deployUser: ${url} returned ${response.status} ${response.statusText}. Body (first 500 chars): ${body.substring(0, 500)}`);
 		throw new Error(`Could not deploy user (${response.status} ${response.statusText})`);
 	}
 };
 
 export const getUserStatus = async (fetch: Fetch, mcEndpoint: URL, accessToken: string) => {
-	const url = appendPath(mcEndpoint, 'user/get_status');
+	const url = appendPath(mcEndpoint, 'user/status');
     logger.debug('[motley_cue] getUserStatus: mcEndpoint =', mcEndpoint.toString());
     logger.debug('[motley_cue] getUserStatus: final URL =', url.toString());
 
@@ -119,11 +146,21 @@ export const getUserStatus = async (fetch: Fetch, mcEndpoint: URL, accessToken: 
 	});
 
 	if (response.ok) {
-		const jsonRaw = await response.json();
+		const text = await response.text();
+		let jsonRaw;
+		try {
+			jsonRaw = JSON.parse(text);
+		} catch (e) {
+			logger.error(`[motley_cue] getUserStatus: response from ${url} is not valid JSON. Content-Type: ${response.headers.get('content-type')}. Body (first 500 chars): ${text.substring(0, 500)}`);
+			throw new Error(`Response from ${url} is not valid JSON (got ${response.headers.get('content-type')})`);
+		}
 
 		const schema = z.object({
 			state: z.string(),
-			message: z.string()
+			message: z.string(),
+			// username is populated by /user/status when an account exists;
+			// omitted (via response_model_exclude_unset) when not_deployed.
+			username: z.string().optional()
 		});
 
 		const parsedAPIResponse = schema.safeParse(jsonRaw);
@@ -133,6 +170,8 @@ export const getUserStatus = async (fetch: Fetch, mcEndpoint: URL, accessToken: 
 
 		return parsedAPIResponse.data;
 	} else {
+		const body = await response.text().catch(() => '(could not read body)');
+		logger.error(`[motley_cue] getUserStatus: ${url} returned ${response.status} ${response.statusText}. Body (first 500 chars): ${body.substring(0, 500)}`);
 		throw new Error(`Could not get user status (${response.status} ${response.statusText})`);
 	}
 };
@@ -152,7 +191,9 @@ export const getSshUser = async (fetch: Fetch, mcEndpoint: URL, accessToken: str
 			return { username: deployment.credentials.ssh_user };
 		}
 	} else {
-		const username = status.message.split(' ')[1];
+		// Prefer the typed username field from /user/status; fall back to
+		// parsing it out of the human-readable message for older motley_cue.
+		const username = status.username ?? status.message.split(' ')[1];
         logger.debug('[motley_cue] getSshUser: extracted username =', username);
 		return { username };
 	}

@@ -5,8 +5,13 @@ import { NodeSSH } from 'node-ssh';
 import express from 'express';
 import ews from 'express-ws';
 import logger from './logger.js';
+import { generateSshKeyPair, fetchOinitCertificate } from './oinit.js';
 
 const port = process.env.WS_PORT || 8444;
+const sshMethod = process.env.SSH_METHOD || 'mccli';
+const oinitEndpoint = process.env.OINIT_ENDPOINT;
+const sshHostname = process.env.SSH_HOSTNAME;
+const sshInternalHostname = process.env.SSH_INTERNAL_HOSTNAME || sshHostname;
 
 const app = express();
 ews(app);
@@ -55,28 +60,92 @@ router.ws('/connect', async function (ws, req) {
 	}
 
 
-    logger.debug(`[server.js] Attempting SSH connection to ${username}@${sshHostname}:${sshPort}`);
+    logger.debug(`[server.js] Attempting SSH connection to ${sshHostname}:${sshPort} using method: ${sshMethod}`);
 
 	const ssh = new NodeSSH();
-	const sshConnection = await ssh
-		.connect({
-			host: sshHostname,
-			port: sshPort,
-			username: username,
-			tryKeyboard: true,
-			onKeyboardInteractive: (name, instructions, instructionsLang, prompts, finish) => {
-                logger.debug('[server.js] Keyboard interactive auth:', { name, prompts: prompts.map(p => p.prompt) });
-				if (prompts.length > 0 && prompts[0].prompt.includes('Access Token')) {
-                    logger.debug('[server.js] Providing access token for authentication');
-					finish([accessToken]);
-				}
+	let sshConnection;
+
+	if (sshMethod === 'oinit') {
+		// Certificate-based authentication via oinit CA
+		logger.debug('[server.js] Using oinit certificate authentication');
+
+		// Try to get credentials from query params (passed from SvelteKit)
+		const oinitPrivateKeyB64 = req.query.oinitPrivateKey?.toString();
+		const oinitCertificateB64 = req.query.oinitCertificate?.toString();
+
+		let privateKey;
+		let certificate;
+
+		if (oinitPrivateKeyB64 && oinitCertificateB64) {
+			// Use credentials passed from SvelteKit (base64 decode)
+			privateKey = Buffer.from(oinitPrivateKeyB64, 'base64').toString('utf-8');
+			certificate = Buffer.from(oinitCertificateB64, 'base64').toString('utf-8');
+			logger.debug('[server.js] Using oinit credentials from SvelteKit session');
+		} else {
+			// Fallback: generate new credentials (shouldn't happen normally)
+			logger.warn('[server.js] No oinit credentials in request, generating new ones');
+
+			if (!oinitEndpoint) {
+				logger.error('[server.js] OINIT_ENDPOINT not configured');
+				ws.close(CLOSE_REASON.error.code, 'oinit endpoint not configured');
+				return;
 			}
-		})
-		.catch((err) => {
-			logger.error('[server.js] SSH connection failed:', err.message);
-			ws.close(CLOSE_REASON.error.code, `Failed to connect to SSH server: ${err.message}`);
-			return null;
-		});
+
+			const oinitCertUrl = `${oinitEndpoint}/${sshHostname}/certificate`;
+			logger.debug(`[server.js] oinitCertUrl ${oinitCertUrl}`);
+
+			const keyPair = generateSshKeyPair();
+			logger.debug('[server.js] Generated ephemeral SSH key pair');
+
+			certificate = await fetchOinitCertificate(accessToken, keyPair.publicKey, oinitCertUrl);
+			if (!certificate) {
+				ws.close(CLOSE_REASON.error.code, 'Failed to obtain SSH certificate from oinit CA');
+				return;
+			}
+			privateKey = keyPair.privateKey;
+		}
+
+		logger.debug(`[server.js] privkey: ${privateKey?.substring(0, 50)}...`);
+		logger.debug(`[server.js] certifi: ${certificate?.substring(0, 50)}...`);
+
+		sshConnection = await ssh
+			.connect({
+				host: sshHostname,
+				port: sshPort,
+				username: 'oinit',
+				privateKey: privateKey,
+				certificate: certificate
+			})
+			.catch((err) => {
+				logger.error(`[server.js] SSH connection failed (oinit): ${err.message || err}`);
+				logger.error(`[server.js] Full error: ${JSON.stringify(err, Object.getOwnPropertyNames(err))}`);
+				ws.close(CLOSE_REASON.error.code, `Failed to connect to SSH server: ${err.message}`);
+				return null;
+			});
+	} else {
+		// Default: mccli keyboard-interactive authentication
+		logger.debug('[server.js] Using mccli keyboard-interactive authentication');
+
+		sshConnection = await ssh
+			.connect({
+				host: sshHostname,
+				port: sshPort,
+				username: username,
+				tryKeyboard: true,
+				onKeyboardInteractive: (name, instructions, instructionsLang, prompts, finish) => {
+					logger.debug('[server.js] Keyboard interactive auth:', { name, prompts: prompts.map(p => p.prompt) });
+					if (prompts.length > 0 && prompts[0].prompt.includes('Access Token')) {
+						logger.debug('[server.js] Providing access token for authentication');
+						finish([accessToken]);
+					}
+				}
+			})
+			.catch((err) => {
+				logger.error('[server.js] SSH connection failed (mccli):', err.message);
+				ws.close(CLOSE_REASON.error.code, `Failed to connect to SSH server: ${err.message}`);
+				return null;
+			});
+	}
 
 	if (!sshConnection) {
 		logger.error('[server.js] SSH connection is null, aborting');
@@ -143,7 +212,7 @@ app.use('/ws', router);
 app.use(handler);
 
 app.listen(port, async () => {
-	logger.info(`Started server on port ${port}.`);
+	logger.info(`Started server on port ${port}. SSH method: ${sshMethod}`);
 });
 
 export { app };

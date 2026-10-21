@@ -3,12 +3,12 @@
 	import { loginParams } from '$lib/stores';
 	import MyCodeArea from '$lib/MyCodeArea.svelte';
 
-	$: sshCmd = `ssh -p ${$loginParams?.sshHost?.port} ${$loginParams?.username}@${$loginParams?.sshHost?.hostname}`;
+	$: sshCmd = `ssh -p ${$loginParams?.sshInternalHost?.port} ${$loginParams?.username}@${$loginParams?.sshInternalHost?.hostname}`;
 	$: mccliCmd = `mccli --mc-endpoint ${$loginParams?.mcEndpoint
 		.toString()
 		.replace(/\/$/, '')} --token ${$page.data.session?.accessToken ?? ''} ssh -p ${
-		$loginParams?.sshHost?.port
-	} ${$loginParams?.sshHost?.hostname}`;
+		$loginParams?.sshInternalHost?.port
+	} ${$loginParams?.sshInternalHost?.hostname}`;
 </script>
 
 <div class="mt-8 space-6 flex flex-col gap-4">

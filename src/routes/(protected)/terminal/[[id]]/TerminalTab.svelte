@@ -10,7 +10,7 @@
 
 <div
 	data-active={isActive ? 'true' : undefined}
-	class="flex flex-row space-between py-1 bg-neutral-300 hover:bg-mc-blue-500 rounded-t-lg text-mc-gray-700 hover:text-white data-[active]:bg-mc-blue-600 data-[active]:text-white"
+	class="flex flex-row space-between py-1 bg-neutral-300 dark:bg-gray-700 hover:bg-mc-blue-500 rounded-t-lg text-mc-gray-700 dark:text-gray-300 hover:text-white data-[active]:bg-mc-blue-600 data-[active]:text-white"
 >
 	<button class="px-2" on:click={() => dispatch('clicked', tabInfo)}>
 		{tabInfo.name}

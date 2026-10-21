@@ -1,8 +1,9 @@
 import { getSshUser } from '$lib/motley_cue';
 import { error } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
-import SERVER_CONFIG from '$lib/server/config';
+import CONFIG from '$lib/server/config';
 import logger from '$lib/server/logger';
+import { generateSshKeyPair, fetchOinitCertificate } from '$lib/server/oinit';
 
 export const load = (async ({ locals }) => {
 	if (!locals.session?.accessToken) {
@@ -10,24 +11,18 @@ export const load = (async ({ locals }) => {
 	}
 
 	const session = locals.userSession;
-    logger.debug('[+layout.server] session.mcEndpoint (public) =', session.mcEndpoint);
 
-	// Use internal endpoint for server-side calls if configured
-	// This allows different URLs for browser (public) vs server (internal Docker network)
-	const internalEndpoint = SERVER_CONFIG.internalMcEndpoint;
-	const mcEndpointUrl = new URL(internalEndpoint || session.mcEndpoint);
+	// mcEndpoint: public URL used by the browser to reach motley-cue
+	// internalMcEndpoint: URL used by server-side code (may differ in Docker setups)
+	const mcEndpoint = new URL(CONFIG.mcEndpoint || session.mcEndpoint);
+	const internalMcEndpoint = new URL(CONFIG.internalMcEndpoint || session.mcEndpoint);
 
-    logger.debug('[+layout.server] Using mcEndpoint for server-side call:', {
-        href: mcEndpointUrl.href,
-        hostname: mcEndpointUrl.hostname,
-        port: mcEndpointUrl.port,
-        pathname: mcEndpointUrl.pathname,
-        isInternal: !!internalEndpoint && internalEndpoint !== session.mcEndpoint
-    });
+	logger.debug('[+layout.server] mcEndpoint (browser):', mcEndpoint.href);
+	logger.debug('[+layout.server] internalMcEndpoint (server):', internalMcEndpoint.href);
 
-	const username = await getSshUser(fetch, mcEndpointUrl, session.token)
+	const username = await getSshUser(fetch, internalMcEndpoint, session.token)
 		.then((sshUser) => {
-            logger.debug('[+layout.server] getSshUser returned:', sshUser);
+			logger.debug('[+layout.server] getSshUser returned:', sshUser);
 			return sshUser?.username ?? '';
 		})
 		.catch((e) => {
@@ -35,11 +30,35 @@ export const load = (async ({ locals }) => {
 			return '';
 		});
 
+	// Generate oinit credentials if configured and not already generated
+	if (CONFIG.oinitEndpoint && !session.oinitPrivateKey) {
+		try {
+			const keyPair = generateSshKeyPair();
+			const endpoint = `${CONFIG.oinitEndpoint}/${CONFIG.sshHostname || session.sshHostname}/certificate`;
+			const certificate = await fetchOinitCertificate(
+				locals.session.accessToken,
+				keyPair.publicKey,
+				endpoint
+			);
+			if (certificate) {
+				session.oinitPrivateKey = keyPair.privateKey;
+				session.oinitCertificate = certificate;
+				logger.debug('[+layout.server] Generated oinit credentials');
+			}
+		} catch (e) {
+			logger.error('[+layout.server] Failed to generate oinit credentials:', e);
+		}
+	}
+
 	return {
 		userId: locals.session?.user?.id,
 		accessToken: locals.session?.accessToken,
 		terminalSessions: locals.userSession.terminals,
 		userSession: locals.userSession,
-		username: username
+		username: username,
+		sshHostname: CONFIG.sshHostname,
+		oinitPrivateKey: session.oinitPrivateKey,
+		oinitCertificate: session.oinitCertificate,
+		session: locals.session
 	};
 }) satisfies LayoutServerLoad;
