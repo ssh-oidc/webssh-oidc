@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { errorMessage, uiBlock } from '$lib/stores';
+	import { uiBlock } from '$lib/stores';
 	import MyCodeArea from '$lib/MyCodeArea.svelte';
 	import type { PageData } from './$types';
 
@@ -26,7 +26,9 @@
 </script>
 
 <div class="flex flex-col gap-4 h-fit">
-	<h1 class="text-2xl font-semibold text-mc-gray dark:text-gray-200">Welcome, {loginParams.user}!</h1>
+	<h1 class="text-2xl font-semibold text-mc-gray dark:text-gray-200">
+		Welcome, {loginParams.user}!
+	</h1>
 	<p class="text-mc-gray dark:text-gray-300">
 		You are logged in with the OIDC provider: <span class="font-semibold text-mc-orange"
 			>{loginParams.profile?.iss}</span

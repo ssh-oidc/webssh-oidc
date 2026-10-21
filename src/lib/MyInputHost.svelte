@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import { hostSchema, resetHost, isValidHost, type Host } from '$lib/types';
+	import { hostSchema, type Host } from '$lib/types';
 	import { z } from 'zod';
 	import MySelect from './MySelect.svelte';
 
@@ -12,14 +12,6 @@
 	export let defaultHost: Host;
 
 	let internalHost: Host = host;
-
-	function unsetErrorStates() {
-		errorStates = {
-			hostname: false,
-			port: false,
-			protocol: false
-		};
-	}
 
 	function setHost(newHost: Host) {
 		if (JSON.stringify(newHost) !== JSON.stringify(host)) {
@@ -45,8 +37,10 @@
 			console.log({ err }, err instanceof z.ZodError);
 			if (err instanceof z.ZodError) {
 				const zerr: z.ZodError = err;
-				zerr.errors.forEach((e) => {
-					if (e.path[0] in errorStates) errorStates[e.path[0]] = true;
+				zerr.issues.forEach((e) => {
+					const field = e.path[0];
+					if (typeof field === 'string' && field in errorStates)
+						errorStates[field as keyof typeof errorStates] = true;
 				});
 			} else if (err instanceof Error) {
 				errorStates = {
@@ -109,7 +103,7 @@
 				on:change={handleCustomise}
 				class="sr-only peer"
 			/>
-			<div class="checkbox peer" />
+			<div class="checkbox peer"></div>
 		</label>
 	</div>
 </div>
@@ -163,6 +157,7 @@
 </div>
 
 <style lang="postcss">
+	@reference '../app.css';
 	.dualinput {
 		@apply grid gap-0;
 		@apply grid-cols-[1fr,6rem];

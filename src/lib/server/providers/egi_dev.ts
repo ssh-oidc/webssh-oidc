@@ -31,6 +31,7 @@ export interface EgiDevProfile extends Record<string, any> {
 	orcid: string;
 	preferred_username: string;
 	ssh_public_key: string;
+	entitlements: string[];
 }
 
 export default function EgiDev<P extends EgiDevProfile>(
@@ -43,8 +44,7 @@ export default function EgiDev<P extends EgiDevProfile>(
 		issuer: 'https://aai-dev.egi.eu/auth/realms/egi',
 		authorization: {
 			params: {
-				scope:
-					'openid profile email eduperson_entitlement voperson_external_affiliation voperson_id'
+				scope: 'openid profile email entitlements voperson_external_affiliation voperson_id'
 			}
 		},
 		checks: ['pkce', 'state'],

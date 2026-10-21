@@ -57,6 +57,7 @@
 </div>
 
 <style lang="postcss">
+	@reference '../app.css';
 	.textarea {
 		word-wrap: break-word;
 		word-break: break-all;

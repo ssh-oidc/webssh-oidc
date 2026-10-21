@@ -18,6 +18,7 @@
 </button>
 
 <style lang="postcss">
+	@reference '../app.css';
 	.button {
 		@apply relative flex w-full justify-center rounded-md border border-transparent;
 		@apply bg-mc-blue-500 py-2 px-4 text-base font-medium text-white enabled:hover:bg-mc-blue-400;

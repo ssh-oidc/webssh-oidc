@@ -30,7 +30,7 @@ const followRedirectsFetch: typeof fetch = (url, options) => {
 export default function Generic<P extends GenericProfile>(
 	options: OAuthUserConfig<P>
 ): OAuthConfig<P> {
-	const config = {
+	const config: OAuthConfig<P> = {
 		id: 'generic',
 		name: 'Generic Provider',
 		type: 'oidc',
@@ -39,5 +39,5 @@ export default function Generic<P extends GenericProfile>(
 		...options
 	};
 	logger.debug(`GENERIC provider final config:${JSON.stringify(config, null, 2)}`);
-    return config;
+	return config;
 }

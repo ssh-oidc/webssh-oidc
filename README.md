@@ -1,14 +1,12 @@
 # Developing
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Requires Node.js 22.12 or newer. Install dependencies with `npm install`, then start a development server:
 
 ```bash
-Terminal 1: npm run dev
+npm run dev
 
 # or start the server and open the app in a new browser tab
-Terminal 1: npm run dev -- --open
-
-Terminal 2: npm run dev:ws (WebSocket server on port 8445)                                                                        
+npm run dev -- --open
 ```
 
 ## Building
@@ -59,16 +57,21 @@ List of supported providers and their corresponding ids:
 - `didmos` for `https://auth.didmos.nfdi-aai.de`
 - `fels` for https://fels.scc.kit.edu/oidc/realms/fels`
 - `myaccessid` for `https://proxy.myaccessid.org`
+
 <!-- https://keycloak.sso.gwdg.de/auth/realms/academiccloud -->
 <!-- https://login.aai.lifescience-ri.eu/oidc -->
 
-You can then spin up a container with:
+You can then run the full stack (app + motley-cue + Caddy) with:
 
 ```bash
-docker-compose up
+docker compose -f docker/compose.yaml up -d --build
 ```
 
-Check out the [motley_cue_docker](https://github.com/dianagudu/motley_cue_docker) repository for a complete example with motley-cue and ssh server.
+Or run only the infrastructure in Docker and the app on the host with
+`npm run dev` — see [docker/README.md](docker/README.md) for both workflows,
+remote-VM deployment, and troubleshooting. `docker/` bundles the motley-cue
+image (motley-cue API + sshd + PAM) and the Caddy configuration, so no
+separate repository/compose file is needed.
 
 If you're not using TLS (not recommended, only do this when you're running the code locally), set `NODE_ENV=development` in the `.env` file.
 

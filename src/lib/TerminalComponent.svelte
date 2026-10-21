@@ -1,8 +1,7 @@
 <script lang="ts">
-    // vim: ft=javascript
+	// vim: ft=javascript
 	import '@xterm/xterm/css/xterm.css';
 	import { createEventDispatcher, onMount } from 'svelte';
-	import { resize } from 'svelte-resize-observer-action';
 	import { errorMessage } from '$lib/stores';
 	import type { Terminal } from '$lib/terminal';
 	import { signOut } from '@auth/sveltekit/client';
@@ -21,12 +20,8 @@
 
 	let termDiv: HTMLElement;
 	let term: Terminal | undefined;
-	let width: number;
-	let height: number;
 
-	function onResize(entry: ResizeObserverEntry) {
-		width = entry.contentRect.width;
-		height = entry.contentRect.height;
+	function onResize(_entry: ResizeObserverEntry) {
 		// console.log(
 		// 	'resize detected.',
 		// 	entry,
@@ -53,7 +48,10 @@
 	}
 
 	onMount(async () => {
-        logger.debug('[TerminalComponent] onMount: loginParams =', JSON.stringify(loginParams, null, 2));
+		logger.debug(
+			'[TerminalComponent] onMount: loginParams =',
+			JSON.stringify(loginParams, null, 2)
+		);
 		if (!loginParams || !loginParams.accessToken) {
 			$errorMessage = 'Please log in again.';
 			await signOut();
@@ -75,8 +73,8 @@
 			wsConnectUrl.searchParams.set('oinitPrivateKey', btoa(loginParams.oinitPrivateKey));
 			wsConnectUrl.searchParams.set('oinitCertificate', btoa(loginParams.oinitCertificate));
 		}
-        logger.debug('[TerminalComponent] WebSocket URL:', wsConnectUrl.toString());
-        logger.debug('[TerminalComponent] Creating WebSocket connection...');
+		logger.debug('[TerminalComponent] WebSocket URL:', wsConnectUrl.toString());
+		logger.debug('[TerminalComponent] Creating WebSocket connection...');
 
 		if (termDiv) {
 			term = new libterm.Terminal(termDiv);
@@ -84,7 +82,7 @@
 			let ws: WebSocket;
 			try {
 				ws = new WebSocket(wsConnectUrl, loginParams.accessToken);
-                logger.debug('[TerminalComponent] WebSocket created, readyState:', ws.readyState);
+				logger.debug('[TerminalComponent] WebSocket created, readyState:', ws.readyState);
 			} catch (err) {
 				logger.error('[TerminalComponent] WebSocket creation failed:', err);
 				$errorMessage = `WebSocket creation failed: ${err}`;
@@ -93,7 +91,7 @@
 
 			let timeout: NodeJS.Timeout | undefined = undefined;
 			ws.onopen = () => {
-                logger.debug('[TerminalComponent] WebSocket opened successfully');
+				logger.debug('[TerminalComponent] WebSocket opened successfully');
 				if (timeout) clearTimeout(timeout);
 			};
 			ws.onclose = (ev: CloseEvent) => {
@@ -145,7 +143,7 @@
 	class="rounded overflow-hidden bg-black shadow-md shadow-neutral-400 p-2 h-full"
 	bind:this={termDiv}
 	use:resizeAction={onResize}
-/>
+></div>
 
 <style lang="postcss">
 	:global(.xterm .xterm-viewport) {

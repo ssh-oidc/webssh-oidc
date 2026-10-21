@@ -1,0 +1,131 @@
+# Full stack: Caddy + motley-cue (with sshd) + webssh-oidc.
+#
+# Run everything (webssh-oidc in a container):
+#   docker compose -f docker/compose.yaml up -d --build
+#
+# Run only the infrastructure and develop webssh-oidc on the host:
+#   docker compose -f docker/compose.yaml -f docker/compose.dev.yaml up -d caddy motley-cue
+#   npm run dev      # SvelteKit + SSH bridge on :8444
+#
+# See docker/README.md for details.
+
+name: webssh-oidc
+
+services:
+  motley-cue:
+    build:
+      context: ./motley-cue
+      dockerfile: Dockerfile
+    image: motley-cue-pam-ssh
+    hostname: ssh-host
+    restart: unless-stopped
+    ports:
+      # Published for direct SSH access/testing from the host.
+      - '1022:22'
+    environment:
+      UID: ${UID:-1000}
+      GID: ${GID:-1000}
+    volumes:
+      - ./motley-cue/config:/config_files
+      - motley_cue_sock:/run/motley_cue
+      - motley_cue_cache:/var/cache/motley_cue
+      - motley_cue_lib:/var/lib/motley_cue
+    healthcheck:
+      test: ['CMD', 'nc', '-z', 'localhost', '22']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  caddy:
+    image: caddy:2-alpine
+    hostname: caddy
+    restart: unless-stopped
+    extra_hosts:
+      # Lets Caddy reach webssh-oidc on the host in dev mode
+      # (npm run dev on :8444) and lets its healthcheck resolve the site.
+      - 'host.docker.internal:host-gateway'
+      - 'motley-cue.localhost:127.0.0.1'
+      - 'webssh-oidc.localhost:127.0.0.1'
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      # Containerized webssh-oidc; docker/compose.dev.yaml overrides this
+      # with host.docker.internal:8444 for the npm run dev workflow.
+      WEBSSH_UPSTREAM: webssh:8444
+      # Override for a remote VM (see docker/README.md). Values are read
+      # from docker/.env / the shell, not from the repo-root .env.
+      WEBSSH_HOST: ${WEBSSH_HOST:-webssh-oidc.localhost}
+      MC_HOST: ${MC_HOST:-motley-cue.localhost}
+    networks:
+      default:
+        aliases:
+          # pam_ssh_oidc verifies tokens against
+          # http://mc_endpoint:8080/verify_user (see the motley-cue image).
+          - mc_endpoint
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - motley_cue_sock:/run/motley_cue:ro
+    depends_on:
+      motley-cue:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'wget',
+          '-q',
+          '-O',
+          '/dev/null',
+          '--no-check-certificate',
+          'https://motley-cue.localhost'
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  webssh:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: runner
+      args:
+        VITE_LOG_LEVEL: info
+    image: webssh-oidc
+    hostname: webssh
+    restart: unless-stopped
+    ports:
+      - '8444:8444'
+    # Single source of truth for both run modes. The values below are the
+    # container-internal ones and override ../.env (which is written for
+    # running the app on the host).
+    env_file:
+      - ../.env
+    environment:
+      INTERNAL_MC_ENDPOINT: http://caddy/motley_cue/
+      SSH_INTERNAL_HOSTNAME: motley-cue
+      SSH_PORT: '22'
+    volumes:
+      - ../config:/app/config
+      - ../config/docs:/app/build/client/docs
+    depends_on:
+      caddy:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'nc', '-z', 'localhost', '8444']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 2s
+
+volumes:
+  motley_cue_sock:
+  motley_cue_cache:
+  motley_cue_lib:
+  caddy_data:
+  caddy_config:

@@ -55,9 +55,11 @@
 	let helpModalOpen = false;
 	let profileModalOpen = false;
 
-	const userName = data.session?.user?.name ?? data.session?.user?.email ?? data.session?.user?.id ?? 'User';
+	const userName =
+		data.session?.user?.name ?? data.session?.user?.email ?? data.session?.user?.id ?? 'User';
 
-	const sshPortFlag = loginParams.sshInternalHost.port === 22 ? '' : ` -p ${loginParams.sshInternalHost.port}`;
+	const sshPortFlag =
+		loginParams.sshInternalHost.port === 22 ? '' : ` -p ${loginParams.sshInternalHost.port}`;
 
 	const helpLoginParams = {
 		accessToken: data.accessToken,
@@ -72,7 +74,9 @@
 
 	function resetDrawerAutoClose() {
 		if (drawerAutoCloseTimer) clearTimeout(drawerAutoCloseTimer);
-		drawerAutoCloseTimer = setTimeout(() => { credentialsDrawerOpen = false; }, 10000);
+		drawerAutoCloseTimer = setTimeout(() => {
+			credentialsDrawerOpen = false;
+		}, 10000);
 	}
 
 	function downloadFile(content: string, filename: string) {
@@ -87,16 +91,18 @@
 
 	function downloadSshCredentials() {
 		const hostname = data.sshHostname;
-		downloadFile(data.oinitPrivateKey, `id_ed25519_${hostname}`);
+		downloadFile(data.oinitPrivateKey!, `id_ed25519_${hostname}`);
 		setTimeout(() => {
-			downloadFile(data.oinitCertificate, `id_ed25519_${hostname}-cert.pub`);
+			downloadFile(data.oinitCertificate!, `id_ed25519_${hostname}-cert.pub`);
 		}, 100);
 	}
 
 	function copyToClipboard(content: string, id: string) {
 		navigator.clipboard.writeText(content).then(() => {
 			copiedId = id;
-			setTimeout(() => { copiedId = null; }, 1000);
+			setTimeout(() => {
+				copiedId = null;
+			}, 1000);
 		});
 	}
 
@@ -159,15 +165,6 @@
 		terminalOrder = [...terminalOrder.filter((id) => id !== tinfo.id), tinfo.id];
 		focusTerminal(tinfo);
 	}
-
-	function confirmUnload(event: BeforeUnloadEvent) {
-		if (terminals.length > 0) {
-			event.preventDefault();
-			const msg = 'You have active terminals. Are you sure you want to leave?';
-			event.returnValue = msg;
-			return msg;
-		}
-	}
 </script>
 
 <!-- <svelte:window on:beforeunload={confirmUnload} /> -->
@@ -177,7 +174,7 @@
 {:else}
 	<div class="grid grid-rows-[auto,1fr,auto] h-[calc(100vh-155px)]">
 		<div class="flex flex-row px-2 gap-0.5 flex-wrap dark:text-gray-300">
-			{#each terminals as tinfo, i}
+			{#each terminals as tinfo (tinfo.id)}
 				<TerminalTab
 					tabInfo={tinfo}
 					isActive={tinfo.id == terminalOrder[terminalOrder.length - 1]}
@@ -187,6 +184,7 @@
 			{/each}
 			<button
 				class="px-2 hover:text-mc-orange leading-none"
+				aria-label="New terminal"
 				on:click={addTerminal}
 				hidden={terminals.length == 0}
 				><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
@@ -203,28 +201,28 @@
 			>
 			<button
 				class="px-2 hover:text-mc-blue-500 leading-none ml-auto"
-				on:click={() => profileModalOpen = true}
+				on:click={() => (profileModalOpen = true)}
 				title="My Profile"
 			>
 				<Icon icon="mdi:account-circle-outline" class="text-2xl" />
 			</button>
 			<button
 				class="px-2 hover:text-mc-blue-500 leading-none"
-				on:click={() => helpModalOpen = true}
+				on:click={() => (helpModalOpen = true)}
 				title="Help - Commandline Login"
 			>
 				<Icon icon="mdi:help-circle-outline" class="text-2xl" />
 			</button>
 			<button
 				class="px-2 hover:text-mc-blue-500 leading-none"
-				on:click={() => darkMode.update(v => !v)}
+				on:click={() => darkMode.update((v) => !v)}
 				title={$darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
 			>
 				<Icon icon={$darkMode ? 'mdi:weather-sunny' : 'mdi:weather-night'} class="text-2xl" />
 			</button>
 		</div>
 		<div class="grid grid-cols-1 grid-rows-1 overflow-hidden">
-			{#each terminals as tinfo, i}
+			{#each terminals as tinfo, i (tinfo.id)}
 				<div
 					id={`terminal${i}`}
 					class="inset-0 terminal"
@@ -244,16 +242,21 @@
 			<div class="border-t border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
 				<button
 					type="button"
-					on:click={() => credentialsDrawerOpen = !credentialsDrawerOpen}
+					on:click={() => (credentialsDrawerOpen = !credentialsDrawerOpen)}
 					class="flex items-center justify-between w-full text-base font-semibold text-mc-gray dark:text-gray-200 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700"
 				>
-					<span class="text-mc-orange">Download Access Token &nbsp;&nbsp;&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp; Download SSH Certificate Credentials</span>
-					<Icon icon={credentialsDrawerOpen ? 'mdi:chevron-down' : 'mdi:chevron-up'} class="text-base" />
+					<span class="text-mc-orange"
+						>Download Access Token &nbsp;&nbsp;&nbsp;&nbsp; |&nbsp;&nbsp;&nbsp;&nbsp; Download SSH
+						Certificate Credentials</span
+					>
+					<Icon
+						icon={credentialsDrawerOpen ? 'mdi:chevron-down' : 'mdi:chevron-up'}
+						class="text-base"
+					/>
 				</button>
 
 				{#if credentialsDrawerOpen}
 					<div class="px-4 py-3 space-y-3 bg-gray-50 dark:bg-gray-800">
-
 						<div class="flex gap-6">
 							<!-- Access Token -->
 							<div class="flex items-center gap-2">
@@ -271,7 +274,10 @@
 									class="flex items-center gap-1 text-mc-gray dark:text-gray-300 hover:text-mc-blue-500"
 								>
 									<span class="text-sm">Access Token</span>
-									<Icon icon={copiedId === 'token' ? 'mdi:check' : 'mdi:content-copy'} class="text-xl" />
+									<Icon
+										icon={copiedId === 'token' ? 'mdi:check' : 'mdi:content-copy'}
+										class="text-xl"
+									/>
 								</button>
 							</div>
 
@@ -284,34 +290,49 @@
 									Download SSH Credentials (Key + Cert)
 								</button>
 								<span class="text-mc-gray dark:text-gray-400 text-xs whitespace-nowrap">
-									Save both to: <span class="font-mono">~/.ssh/</span><br/>
+									Save both to: <span class="font-mono">~/.ssh/</span><br />
 									<span class="font-mono">chmod 600 ~/.ssh/id_ed25519_{data.sshHostname}</span>
-
 								</span>
 								<button
-									on:click={() => copyToClipboard(data.oinitPrivateKey, 'key')}
+									on:click={() => copyToClipboard(data.oinitPrivateKey!, 'key')}
 									class="flex items-center gap-1 text-mc-gray dark:text-gray-300 hover:text-mc-blue-500"
 								>
 									<span class="text-sm">Private Key</span>
-									<Icon icon={copiedId === 'key' ? 'mdi:check' : 'mdi:content-copy'} class="text-xl" />
+									<Icon
+										icon={copiedId === 'key' ? 'mdi:check' : 'mdi:content-copy'}
+										class="text-xl"
+									/>
 								</button>
 								<button
-									on:click={() => copyToClipboard(data.oinitCertificate, 'cert')}
+									on:click={() => copyToClipboard(data.oinitCertificate!, 'cert')}
 									class="flex items-center gap-1 text-mc-gray dark:text-gray-300 hover:text-mc-blue-500"
 								>
 									<span class="text-sm">Certificate</span>
-									<Icon icon={copiedId === 'cert' ? 'mdi:check' : 'mdi:content-copy'} class="text-xl" />
+									<Icon
+										icon={copiedId === 'cert' ? 'mdi:check' : 'mdi:content-copy'}
+										class="text-xl"
+									/>
 								</button>
 							</div>
 						</div>
 						<div class="flex items-center gap-2">
 							<span class="text-mc-gray dark:text-gray-300 text-sm font-medium">SSH command:</span>
-							<code class="font-mono text-sm bg-gray-200 dark:bg-gray-700 dark:text-gray-200 px-2 py-1 rounded">ssh -i ~/.ssh/id_ed25519_{data.sshHostname}{sshPortFlag} oinit@{data.sshHostname}</code>
+							<code
+								class="font-mono text-sm bg-gray-200 dark:bg-gray-700 dark:text-gray-200 px-2 py-1 rounded"
+								>ssh -i ~/.ssh/id_ed25519_{data.sshHostname}{sshPortFlag} oinit@{data.sshHostname}</code
+							>
 							<button
-								on:click={() => copyToClipboard(`ssh -i ~/.ssh/id_ed25519_${data.sshHostname}${sshPortFlag} oinit@${data.sshHostname}`, 'sshCmd')}
+								on:click={() =>
+									copyToClipboard(
+										`ssh -i ~/.ssh/id_ed25519_${data.sshHostname}${sshPortFlag} oinit@${data.sshHostname}`,
+										'sshCmd'
+									)}
 								class="text-mc-gray dark:text-gray-300 hover:text-mc-blue-500"
 							>
-								<Icon icon={copiedId === 'sshCmd' ? 'mdi:check' : 'mdi:content-copy'} class="text-xl" />
+								<Icon
+									icon={copiedId === 'sshCmd' ? 'mdi:check' : 'mdi:content-copy'}
+									class="text-xl"
+								/>
 							</button>
 						</div>
 					</div>
@@ -330,7 +351,7 @@
 
 <ProfileModal
 	bind:open={profileModalOpen}
-	userName={userName}
+	{userName}
 	sshUser={data.username}
 	issuer={String(data.session?.profile?.iss ?? '')}
 	profile={data.session?.profile}

@@ -1,9 +1,9 @@
 ---
 include:
-  - "https://codebase.helmholtz.cloud/m-team/tools/ci-voodoo/raw/master/ci-include/pipeline-jobs-publish-to-repo.yml"
+  - 'https://codebase.helmholtz.cloud/m-team/tools/ci-voodoo/raw/master/ci-include/pipeline-jobs-publish-to-repo.yml'
 
 variables:
-  USE_GORELEASER: "true"
+  USE_GORELEASER: 'true'
 
 image: marcvs/build_generic_debian-trixie:latest
 
@@ -25,18 +25,18 @@ default:
 build:
   stage: build
   image:
-    name: node:20-trixie-slim
+    name: node:22-trixie-slim
   script:
     - |
       apt update && apt -y install git python3 build-essential
-      npm install
+      corepack enable
+      npm ci
       npm run build
       echo "find"
       find .
   artifacts:
     paths:
-      - "build/*"
-
+      - 'build/*'
 
 package:
   stage: package
@@ -76,7 +76,7 @@ package:
       .gitlab-ci-scripts/package.sh
   artifacts:
     paths:
-      - "results/*"
+      - 'results/*'
 
 # test:
 #   stage: test

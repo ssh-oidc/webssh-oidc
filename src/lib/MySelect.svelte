@@ -33,8 +33,7 @@
 	data-error={hasError ? 'true' : undefined}
 	on:click={handleExpand}
 	on:keydown
-	use:clickOutside
-	on:outsideclick={() => (expand = false)}
+	use:clickOutside={() => (expand = false)}
 >
 	<div class="flex flex-row">
 		{#key value}
@@ -68,7 +67,7 @@
 			on:click|stopPropagation={handleExpand}
 			on:keydown
 		>
-			{#each Object.values(values || {}) as val}
+			{#each Object.values(values || {}) as val (val)}
 				<!-- svelte-ignore a11y-no-static-element-interactions -->
 				<div
 					class="p-2 cursor-pointer hover:bg-mc-blue-200 hover:text-white"
@@ -86,6 +85,7 @@
 </div>
 
 <style lang="postcss">
+	@reference '../app.css';
 	.expanded {
 		@apply border-mc-blue-400 ring-mc-blue-400;
 		@apply text-mc-gray-300;
