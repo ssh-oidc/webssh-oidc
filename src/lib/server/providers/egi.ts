@@ -31,6 +31,7 @@ export interface EgiProfile extends Record<string, any> {
 	orcid: string;
 	preferred_username: string;
 	ssh_public_key: string;
+	entitlements: string[];
 }
 
 export default function Egi<P extends EgiProfile>(options: OAuthUserConfig<P>): OAuthConfig<P> {
@@ -42,7 +43,7 @@ export default function Egi<P extends EgiProfile>(options: OAuthUserConfig<P>): 
 		authorization: {
 			params: {
 				scope:
-					'openid profile email eduperson_entitlement voperson_external_affiliation voperson_id'
+					'openid profile email entitlements voperson_external_affiliation voperson_id'
 			}
 		},
 		checks: ['pkce', 'state'],
