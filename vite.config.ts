@@ -31,7 +31,9 @@ function wsBridge(): Plugin {
 		name: 'ws-bridge',
 		configureServer(server) {
 			const httpServer = server.httpServer;
-			if (!httpServer) throw new Error('ws-bridge: Vite HTTP server is not available');
+			// Vitest and other middleware-mode consumers have no HTTP server to
+			// attach to; the bridge is only needed by the real dev server.
+			if (!httpServer) return;
 
 			const wss = new WebSocketServer({ noServer: true });
 
