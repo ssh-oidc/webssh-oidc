@@ -85,6 +85,7 @@
 </div>
 
 <style lang="postcss">
+	@reference '../app.css';
 	.expanded {
 		@apply border-mc-blue-400 ring-mc-blue-400;
 		@apply text-mc-gray-300;

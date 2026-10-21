@@ -155,6 +155,7 @@
 </div>
 
 <style lang="postcss">
+	@reference '../app.css';
 	.dualinput {
 		@apply grid gap-0;
 		@apply grid-cols-[1fr,6rem];

@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { sveltekit } from '@sveltejs/kit/vite';
+import tailwindcss from '@tailwindcss/vite';
 import WebSocket from 'ws';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
@@ -55,7 +56,7 @@ function wsBridge(): Plugin {
 }
 
 export default defineConfig({
-	plugins: [sveltekit(), wsBridge()],
+	plugins: [tailwindcss(), sveltekit(), wsBridge()],
 	server: {
 		// Listen on all interfaces so Caddy (running in Docker) can reach the
 		// dev server through the host gateway (host.docker.internal).
