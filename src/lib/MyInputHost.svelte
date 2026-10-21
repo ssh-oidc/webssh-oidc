@@ -37,8 +37,10 @@
 			console.log({ err }, err instanceof z.ZodError);
 			if (err instanceof z.ZodError) {
 				const zerr: z.ZodError = err;
-				zerr.errors.forEach((e) => {
-					if (e.path[0] in errorStates) errorStates[e.path[0]] = true;
+				zerr.issues.forEach((e) => {
+					const field = e.path[0];
+					if (typeof field === 'string' && field in errorStates)
+						errorStates[field as keyof typeof errorStates] = true;
 				});
 			} else if (err instanceof Error) {
 				errorStates = {

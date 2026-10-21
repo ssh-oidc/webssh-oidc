@@ -47,7 +47,7 @@ export const loadOps = async (fetch: Fetch, mcEndpoint: URL) => {
 
 		const parsedAPIResponse = schema.safeParse(jsonRaw);
 		if (!parsedAPIResponse.success) {
-			throw new Error(`Failed to parse API response: ${parsedAPIResponse.error.errors}`);
+			throw new Error(`Failed to parse API response: ${parsedAPIResponse.error.issues}`);
 		}
 
 		const supportedOPs = parsedAPIResponse.data.supported_OPs;
@@ -90,7 +90,7 @@ export const loadOpInfo = async (fetch: Fetch, mcEndpoint: URL, opUrl: string) =
 
 		const parsedAPIResponse = schema.safeParse(jsonRaw);
 		if (!parsedAPIResponse.success) {
-			throw new Error(`Failed to parse API response: ${parsedAPIResponse.error.errors}`);
+			throw new Error(`Failed to parse API response: ${parsedAPIResponse.error.issues}`);
 		}
 
 		return parsedAPIResponse.data;
@@ -141,7 +141,7 @@ export const deployUser = async (fetch: Fetch, mcEndpoint: URL, accessToken: str
 
 		const parsedAPIResponse = schema.safeParse(jsonRaw);
 		if (!parsedAPIResponse.success) {
-			throw new Error(`Failed to parse API response: ${parsedAPIResponse.error.errors}`);
+			throw new Error(`Failed to parse API response: ${parsedAPIResponse.error.issues}`);
 		}
 
 		return parsedAPIResponse.data;
@@ -191,7 +191,7 @@ export const getUserStatus = async (fetch: Fetch, mcEndpoint: URL, accessToken: 
 
 		const parsedAPIResponse = schema.safeParse(jsonRaw);
 		if (!parsedAPIResponse.success) {
-			throw new Error(`Failed to parse API response: ${parsedAPIResponse.error.errors}`);
+			throw new Error(`Failed to parse API response: ${parsedAPIResponse.error.issues}`);
 		}
 
 		return parsedAPIResponse.data;

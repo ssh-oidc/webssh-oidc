@@ -12,7 +12,6 @@ export class Terminal {
 		this.elementRef = target;
 		this._fitAddon = new FitAddon();
 		this.handle = new xterm({
-			windowsMode: window.navigator.userAgent.match(/Windows/g) ? true : false,
 			scrollback: 1000,
 			scrollOnUserInput: true,
 			smoothScrollDuration: 100,

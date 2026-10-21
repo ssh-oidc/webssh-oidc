@@ -1,8 +1,7 @@
 // @ts-check
 
 import { NodeSSH } from 'node-ssh';
-import express from 'express';
-import ews from 'express-ws';
+import { WebSocketServer } from 'ws';
 import logger from './logger.js';
 import { generateSshKeyPair, fetchOinitCertificate } from './oinit.js';
 
@@ -219,15 +218,25 @@ export async function handleConnection(ws, request) {
 }
 
 /**
- * Mount the SSH bridge on an Express app. Used by server.js in production,
- * where the same process also serves the SvelteKit build.
+ * Attach the SSH bridge to an HTTP server.
  *
- * @param {import('express').Express} app
+ * @param {import('http').Server} server
  */
-export function attachWsBridge(app) {
-	ews(app);
-	const router = express.Router();
-	router.ws('/connect', handleConnection);
-	app.use('/ws', router);
-	return app;
+export function attachWsBridge(server) {
+	const wss = new WebSocketServer({ noServer: true });
+
+	server.on('upgrade', (req, socket, head) => {
+		const url = new URL(req.url ?? '/', 'http://localhost');
+		if (url.pathname !== '/ws/connect') return;
+
+		wss.handleUpgrade(req, socket, head, (ws) => {
+			handleConnection(ws, {
+				headers: req.headers,
+				query: Object.fromEntries(url.searchParams)
+			});
+		});
+	});
+
+	server.on('close', () => wss.close());
+	return wss;
 }
