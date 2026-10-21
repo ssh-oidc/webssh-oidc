@@ -18,10 +18,19 @@ import Generic from '$lib/server/providers/generic';
 import type { ProviderConfig } from '$lib/server/config';
 import CONFIG from '$lib/server/config';
 import logger from '$lib/server/logger';
+import { providers as providerLogos, generic } from '$lib/providers';
 
 logger.debug(`CONFIG object loaded: ${JSON.stringify(CONFIG, null, 2)}`);
 
-const providers = CONFIG.providers.map(loadProvider) as OAuth2Config<Profile>[];
+const providers = CONFIG.providers.map((config) => withLogo(loadProvider(config), config.issuer));
+
+// Auth.js' built-in signin page (used for error pages) defaults to
+// https://authjs.dev/img/providers/<id>.svg, which only exists for a handful
+// of providers. Point it at the logos we ship instead.
+function withLogo<T extends { style?: unknown }>(provider: T, issuer: string): T {
+	const logo = providerLogos[issuer.trim().replace(/\/+$/, '')]?.logo ?? generic.logo;
+	return { ...provider, style: { ...(provider.style as Record<string, unknown>), logo } };
+}
 
 function loadProvider(provider_config: ProviderConfig) {
 
