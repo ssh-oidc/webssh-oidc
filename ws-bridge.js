@@ -226,8 +226,17 @@ export function attachWsBridge(server) {
 	const wss = new WebSocketServer({ noServer: true });
 
 	server.on('upgrade', (req, socket, head) => {
-		const url = new URL(req.url ?? '/', 'http://localhost');
-		if (url.pathname !== '/ws/connect') return;
+		let url;
+		try {
+			url = new URL(req.url ?? '/', 'http://localhost');
+		} catch {
+			socket.destroy();
+			return;
+		}
+		if (url.pathname !== '/ws/connect') {
+			socket.destroy();
+			return;
+		}
 
 		wss.handleUpgrade(req, socket, head, (ws) => {
 			handleConnection(ws, {

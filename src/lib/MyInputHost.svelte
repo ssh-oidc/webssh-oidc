@@ -160,10 +160,10 @@
 	@reference '../app.css';
 	.dualinput {
 		@apply grid gap-0;
-		@apply grid-cols-[1fr,6rem];
+		@apply grid-cols-[1fr_6rem];
 
 		&.triple {
-			@apply grid-cols-[5rem,1fr,6rem];
+			@apply grid-cols-[5rem_1fr_6rem];
 		}
 
 		input {

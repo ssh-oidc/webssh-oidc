@@ -47,6 +47,8 @@ www.{$MC_HOST:motley-cue.localhost} {
 #   - legacy pam_ssh_oidc contract: http://mc_endpoint:8080/verify_user
 # Traffic never leaves the host/docker network, so plain HTTP is fine.
 http://caddy, http://localhost, :8080 {
+	respond /health 200
+
 	# Same CORS behavior as the HTTPS API vhost, so the browser can use
 	# MC_ENDPOINT=http://localhost/motley_cue/ without trusting the CA.
 	header Access-Control-Allow-Origin *

@@ -1,6 +1,6 @@
 # Developing
 
-Requires Node.js 22.12 or newer. Install dependencies with `npm install`, then start a development server:
+Requires Node.js 22.13+, 24.x, or 26+. Install dependencies with `npm install`, then start a development server:
 
 ```bash
 npm run dev
