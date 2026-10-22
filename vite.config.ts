@@ -22,7 +22,13 @@ function wsBridge(): Plugin {
 			const wss = new WebSocketServer({ noServer: true });
 
 			httpServer.on('upgrade', (req, socket, head) => {
-				const url = new URL(req.url ?? '/', 'http://localhost');
+				let url: URL;
+				try {
+					url = new URL(req.url ?? '/', 'http://localhost');
+				} catch {
+					socket.destroy();
+					return;
+				}
 				if (url.pathname !== '/ws/connect') return;
 
 				wss.handleUpgrade(req, socket, head, (ws) => {

@@ -11,4 +11,6 @@ if [ -z "$(ls -A /config_files)" ]; then
     chown -R $USER_ID:$GROUP_ID /config_files
 fi
 
+ssh-keygen -A
+
 exec "$@"

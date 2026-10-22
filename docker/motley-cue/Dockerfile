@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y \
     netcat-openbsd
 RUN echo deb [signed-by=/etc/apt/trusted.gpg.d/kitrepo-archive.gpg] https://repo.data.kit.edu//debian/bookworm ./ \
     >> /etc/apt/sources.list
-RUN curl repo.data.kit.edu/repo-data-kit-edu-key.gpg \
+RUN curl -fsSL https://repo.data.kit.edu/repo-data-kit-edu-key.gpg \
     | gpg --dearmor \
     > /etc/apt/trusted.gpg.d/kitrepo-archive.gpg
 RUN apt-get update && apt-get install -y \
@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y \
 
 
 ##### ssh config
+RUN rm -f /etc/ssh/ssh_host_*
 RUN mkdir /run/sshd
 RUN echo "Include /etc/ssh/sshd_config.d/*.conf" >> /etc/ssh/sshd_config \
     && echo "ChallengeResponseAuthentication yes" > /etc/ssh/sshd_config.d/oidc.conf

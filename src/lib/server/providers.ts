@@ -18,7 +18,21 @@ import CONFIG from '$lib/server/config';
 import logger from '$lib/server/logger';
 import { providers as providerLogos, generic } from '$lib/providers';
 
-logger.debug(`CONFIG object loaded: ${JSON.stringify(CONFIG, null, 2)}`);
+logger.debug(
+	{
+		providers: CONFIG.providers.map(({ issuer, clientId, name, id }) => ({
+			issuer,
+			clientId,
+			name,
+			id
+		})),
+		mcEndpoint: CONFIG.mcEndpoint,
+		internalMcEndpoint: CONFIG.internalMcEndpoint,
+		sshHostname: CONFIG.sshHostname,
+		sshInternalHost: CONFIG.sshInternalHost
+	},
+	'CONFIG object loaded'
+);
 
 const providers = CONFIG.providers.map((config) => withLogo(loadProvider(config), config.issuer));
 

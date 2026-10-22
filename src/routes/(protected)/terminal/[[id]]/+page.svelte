@@ -172,7 +172,7 @@
 {#if data.username === ''}
 	<p>Could not get SSH username</p>
 {:else}
-	<div class="grid grid-rows-[auto,1fr,auto] h-[calc(100vh-155px)]">
+	<div class="grid grid-rows-[auto_1fr_auto] h-[calc(100vh-155px)]">
 		<div class="flex flex-row px-2 gap-0.5 flex-wrap dark:text-gray-300">
 			{#each terminals as tinfo (tinfo.id)}
 				<TerminalTab

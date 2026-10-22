@@ -38,6 +38,15 @@ export default function Generic<P extends GenericProfile>(
 		[customFetch]: followRedirectsFetch,
 		...options
 	};
-	logger.debug(`GENERIC provider final config:${JSON.stringify(config, null, 2)}`);
+	logger.debug(
+		{
+			id: config.id,
+			name: config.name,
+			type: config.type,
+			issuer: config.issuer,
+			checks: config.checks
+		},
+		'GENERIC provider final config'
+	);
 	return config;
 }

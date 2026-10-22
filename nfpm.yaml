@@ -35,6 +35,12 @@ contents:
     type: tree
   - src: ./server.js
     dst: /usr/lib/webssh-oidc/
+  - src: ./ws-bridge.js
+    dst: /usr/lib/webssh-oidc/
+  - src: ./logger.js
+    dst: /usr/lib/webssh-oidc/
+  - src: ./oinit.js
+    dst: /usr/lib/webssh-oidc/
   - src: ./config/webssh-oidc.service
     dst: /usr/lib/systemd/system/webssh-oidc.service
   - src: ./.env.example
@@ -57,6 +63,12 @@ overrides:
         dst: /usr/lib/webssh-oidc/build
         type: tree
       - src: ./server.js
+        dst: /usr/lib/webssh-oidc/
+      - src: ./ws-bridge.js
+        dst: /usr/lib/webssh-oidc/
+      - src: ./logger.js
+        dst: /usr/lib/webssh-oidc/
+      - src: ./oinit.js
         dst: /usr/lib/webssh-oidc/
       - src: ./config/webssh-oidc.service
         dst: /usr/lib/systemd/system/webssh-oidc.service
