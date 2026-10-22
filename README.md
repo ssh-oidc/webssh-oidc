@@ -25,13 +25,11 @@ You can preview the production build with `npm run preview`.
 npm run start
 ```
 
-## Build and run docker image
+## Run the docker image
 
-After building the app, you can build the docker image:
-
-```bash
-docker build -t webssh-oidc .
-```
+The application image is published as `sshoidc/webssh-oidc`. Compose uses the
+`latest` tag by default; use `WEBSSH_TAG=prerel` for the prerelease image or a
+version such as `WEBSSH_TAG=0.5.0` for a release.
 
 To run the docker image, you first need to configure the environment variables.
 
@@ -64,8 +62,18 @@ List of supported providers and their corresponding ids:
 You can then run the full stack (app + motley-cue + Caddy) with:
 
 ```bash
-docker compose -f docker/compose.yaml up -d --build
+docker compose -f docker/compose.yaml pull webssh
+docker compose -f docker/compose.yaml up -d
 ```
+
+To try the prerelease image:
+
+```bash
+WEBSSH_TAG=prerel docker compose -f docker/compose.yaml pull webssh
+WEBSSH_TAG=prerel docker compose -f docker/compose.yaml up -d
+```
+
+The `motley-cue` image is still built locally from `docker/motley-cue`.
 
 Or run only the infrastructure in Docker and the app on the host with
 `npm run dev` — see [docker/README.md](docker/README.md) for both workflows,

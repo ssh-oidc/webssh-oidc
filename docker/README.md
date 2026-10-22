@@ -77,8 +77,14 @@ repository root.
 From the repository root:
 
 ```bash
-docker compose -f docker/compose.yaml up -d --build
+docker compose -f docker/compose.yaml pull webssh
+docker compose -f docker/compose.yaml up -d
 ```
+
+The `webssh` image is pulled from `sshoidc/webssh-oidc`. The default tag is
+`latest`; use `WEBSSH_TAG=prerel` for the prerelease image or a version such
+as `WEBSSH_TAG=0.5.0` for a release. The `motley-cue` image is built locally
+from `docker/motley-cue`.
 
 - App: <http://localhost:8444>
 - motley-cue API (browser, plain HTTP, CORS enabled):
@@ -102,10 +108,10 @@ Notes:
 - Use `http://localhost:8444` (the registered OAuth redirect base). If you
   browse through `https://webssh-oidc.localhost`, the redirect URI changes
   and must be registered as well; set `AUTH_URL` accordingly.
-- To rebuild only the app after code changes:
+- To update the app image:
 
   ```bash
-  docker compose -f docker/compose.yaml build webssh
+  docker compose -f docker/compose.yaml pull webssh
   docker compose -f docker/compose.yaml up -d --no-deps webssh
   ```
 
@@ -191,8 +197,12 @@ The stack is hostname-parameterized. For a public VM:
 7. Start it:
 
    ```bash
-   docker compose -f docker/compose.yaml up -d --build
+   docker compose -f docker/compose.yaml pull webssh
+   docker compose -f docker/compose.yaml up -d
    ```
+
+   Set `WEBSSH_TAG` to `prerel` or a release version if you do not want
+   `latest`.
 
    The SSH command shown in the UI uses `SSH_HOSTNAME`/`SSH_PORT`; for
    remote access set e.g. `SSH_HOSTNAME=ssh.example.org` and
