@@ -4,16 +4,41 @@ on:
   - push
   - delete
 
+permissions:
+  contents: read
+
 jobs:
   sync:
     runs-on: ubuntu-latest
     name: Git Repo Sync
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: wangchucheng/git-repo-sync@v0.1.0
-        with:
-          target-url: ${{ secrets.GITLAB_MIRROR_URL }}
-          target-username: ${{ secrets.GITLAB_MIRROR_USERNAME }}
-          target-token: ${{ secrets.GITLAB_MIRROR_TOKEN }}
+      - name: Mirror to Helmholtz GitLab
+        env:
+          TARGET_URL: ${{ secrets.GITLAB_MIRROR_URL }}
+          TARGET_USERNAME: ${{ secrets.GITLAB_MIRROR_USERNAME }}
+          TARGET_TOKEN: ${{ secrets.GITLAB_MIRROR_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_REF: ${{ github.event.ref }}
+        run: |
+          set -euo pipefail
+          GIT_TERMINAL_PROMPT=0
+          export GIT_TERMINAL_PROMPT
+
+          git remote add target "https://${TARGET_USERNAME}:${TARGET_TOKEN}@${TARGET_URL#https://}"
+
+          case "$EVENT_NAME" in
+            push)
+              git push -f --all target
+              git push -f --tags target
+              ;;
+            delete)
+              git push -d target "$EVENT_REF"
+              ;;
+            *)
+              echo "Unsupported event: $EVENT_NAME" >&2
+              exit 1
+              ;;
+          esac
