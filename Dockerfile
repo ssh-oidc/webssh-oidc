@@ -1,40 +1,50 @@
+# syntax=docker/dockerfile:1
+
+# ---- builder ----------------------------------------------------------------
 FROM node:22-trixie-slim AS builder
-# FROM node:22-trixie AS builder
 
 WORKDIR /app
 
-# RUN apt update && apt -y install iputils-ping net-tools netcat-openbsd httpie curl
-RUN apt-get update && apt -y install git python3 build-essential && rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+    && apt-get -y install git python3 build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-# Accept build argument for client-side log level
 ARG VITE_LOG_LEVEL=info
 
-COPY . /app
+# Install dependencies first for layer caching (see .dockerignore).
+COPY package.json package-lock.json .npmrc ./
 RUN npm ci
-# Pass VITE_LOG_LEVEL to the build process
+
+COPY . /app
 RUN VITE_LOG_LEVEL=${VITE_LOG_LEVEL} npm run build
-# Prune dev dependencies for smaller production image
+# Prune dev dependencies for a smaller production image
 RUN npm prune --production
 
-
-
+# ---- runner -----------------------------------------------------------------
+# Production runtime: node_modules (pruned), the SvelteKit build and the
+# Node entry points. Configuration (config/*.yml) and secrets stay outside
+# the image: mount them (docker/compose.yaml) or set env vars.
 FROM node:22-trixie-slim AS runner
-# FROM node:22-trixie AS runner
 
-ENV DEBIAN_FRONTEND=noninteractive
+ENV NODE_ENV=production
+
+# netcat-openbsd is needed by the healthcheck (compose and below).
+RUN apt-get update \
+    && apt-get -y install netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-RUN apt-get update && apt-get -y install netcat-openbsd iproute2 net-tools iputils-ping telnet procps neovim && rm -rf /var/lib/apt/lists/*
+COPY --from=builder --chown=node:node /app/node_modules /app/node_modules
+COPY --from=builder --chown=node:node /app/package.json /app/package.json
+COPY --from=builder --chown=node:node /app/build /app/build
+COPY --chown=node:node server.js ws-bridge.js oinit.js logger.js /app/
 
-# Copy node_modules from builder (already pruned to production only)
-COPY --from=builder /app/node_modules /app/node_modules
-COPY --from=builder /app/package.json /app/package.json
-COPY --from=builder /app/build /app/build
-COPY server.js /app/server.js
-COPY ws-bridge.js /app/ws-bridge.js
-COPY oinit.js /app/oinit.js
-COPY logger.js /app/logger.js
+USER node
 
 EXPOSE 8444
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+    CMD nc -z localhost 8444
 
 CMD ["node", "-r", "dotenv/config", "./server.js"]
