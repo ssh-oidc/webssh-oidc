@@ -1,18 +1,28 @@
 # webssh-oidc + motley-cue stack
 
-One Compose stack that runs everything needed for webssh-oidc locally:
+Two Compose variants run the full stack:
 
-| Service      | Purpose                                                              |
-| ------------ | -------------------------------------------------------------------- |
-| `caddy`      | TLS frontend: app, motley-cue API (browser), plain-HTTP API (server) |
-| `motley-cue` | motley-cue API + sshd + PAM (`pam_ssh_oidc`), published on `:1022`   |
-| `webssh`     | webssh-oidc (Node/SvelteKit + WebSocket SSH bridge) on `:8444`       |
+| Variant | Compose file | SSH login | motley_cue service |
+| ------- | ------------ | --------- | ------------------ |
+| PAM     | `docker/compose-pam.yaml`    | `pam_ssh_oidc` token login      | `sshoidc/motley-cue-allinone:<version>-pam`    |
+| oinit   | `docker/compose-oinit.yaml`  | oinit SSH certificates          | `sshoidc/motley-cue-allinone:<version>-oinit`  |
 
-The same stack supports two development modes:
+Both use the official all-in-one motley_cue appliance image (motley_cue API +
+`local_unix` account provisioning + sshd in one container) and add:
+
+| Service | Purpose |
+| ------- | ------- |
+| `caddy`     | TLS frontend: app, motley_cue API, and (oinit variant) the oinit CA |
+| `webssh`    | webssh-oidc (Node/SvelteKit + WebSocket SSH bridge) on `:8444` |
+| `oinit-ca`  | oinit certificate authority (oinit variant only) |
+
+Both variants support the same two development modes:
 
 1. **Everything in Docker** – `webssh` runs as a container.
-2. **Hybrid** – Caddy + motley-cue in Docker, the app on the host via
-   `npm run dev` (fast reloads).
+2. **Hybrid** – Caddy + motley-cue (and the CA) in Docker, the app on the
+   host via `npm run dev` (fast reloads).
+
+The variants cannot run at the same time (they publish the same ports).
 
 ---
 
@@ -20,16 +30,15 @@ The same stack supports two development modes:
 
 ```
 docker/
-  compose.yaml          # full stack
+  compose-pam.yaml      # full stack, PAM token login
+  compose-oinit.yaml    # full stack, oinit certificate login
   compose.dev.yaml      # override: Caddy proxies to the host (npm run dev)
   Caddyfile             # TLS + routing; hostnames overridable via env
-  motley-cue/
-    Dockerfile          # motley-cue + sshd + PAM image (Debian/KIT repo)
-    entrypoint.sh       # seeds /config_files on first start
-    runner.sh           # starts motley-cue + sshd
-    config/
-      motley_cue.conf   # OPs, scopes, user mapping, OTP storage
-      feudal_adapter.conf # local linux user backend, shells, groups
+  motley-cue-config/
+    motley_cue.conf     # OPs, scopes, user mapping, OTP storage
+    feudal_adapter.conf # local_unix backend, shells, groups
+  oinit-ca.ini          # oinit CA config (oinit variant)
+  oinit-signup.sh       # one-shot host-key signing helper (oinit variant)
 ```
 
 Everything else (`.env`, `config/development.yml`, app sources) stays in the
@@ -40,11 +49,12 @@ repository root.
 ## Prerequisites
 
 - Docker with the Compose plugin.
-- Ports `80`, `443`, `8444` and `1022` free on the host.
+- Ports `80`, `443`, `8444` and `1022` free on the host (`8082` as well for
+  the oinit variant).
 - For the optional HTTPS hostnames, add to `/etc/hosts`:
 
   ```
-  127.0.0.1 motley-cue.localhost webssh-oidc.localhost
+  127.0.0.1 motley-cue.localhost webssh-oidc.localhost oinit-ca.localhost
   ```
 
   The default local configuration does **not** need these entries: the app is
@@ -52,8 +62,8 @@ repository root.
   `http://localhost/motley_cue/`, both plain HTTP on localhost.
 
 - The Caddy local CA only has to be trusted if you use the HTTPS hostnames
-  (`https://motley-cue.localhost`, `https://webssh-oidc.localhost`).
-  That is optional locally — see
+  (`https://motley-cue.localhost`, `https://webssh-oidc.localhost`,
+  `https://oinit-ca.localhost`). That is optional locally — see
   [Untrusted CA](#troubleshooting). If the `caddy_data` volume is deleted,
   the CA is regenerated.
 
@@ -74,55 +84,88 @@ repository root.
 
 ## Mode 1: everything in Docker
 
+The `webssh` image is pulled from `sshoidc/webssh-oidc` (default tag
+`latest`; use `WEBSSH_TAG=prerel` for the prerelease image or a version such
+as `WEBSSH_TAG=0.5.0` for a release). The motley_cue appliance image is
+pulled from `sshoidc/motley-cue-allinone`; select its version with `MC_TAG`
+(default `0.8.9`).
+
+### PAM variant
+
 From the repository root:
 
 ```bash
-docker compose -f docker/compose.yaml pull webssh
-docker compose -f docker/compose.yaml up -d
+docker compose -f docker/compose-pam.yaml pull
+docker compose -f docker/compose-pam.yaml up -d
 ```
 
-The `webssh` image is pulled from `sshoidc/webssh-oidc`. The default tag is
-`latest`; use `WEBSSH_TAG=prerel` for the prerelease image or a version such
-as `WEBSSH_TAG=0.5.0` for a release. The `motley-cue` image is built locally
-from `docker/motley-cue`.
-
 - App: <http://localhost:8444>
-- motley-cue API (browser, plain HTTP, CORS enabled):
+- motley-cue API (browser/client tools, plain HTTP, CORS enabled):
   <http://localhost/motley_cue/>
-- HTTPS hostnames (optional, needs the Caddy CA): <https://motley-cue.localhost>
-  and <https://webssh-oidc.localhost>
+- HTTPS hostnames (optional, needs the Caddy CA):
+  <https://motley-cue.localhost> and <https://webssh-oidc.localhost>
 - SSH: `ssh -p 1022 <motley-cue-user>@localhost`
 
-Notes:
+### oinit variant
+
+```bash
+# 1. Start the CA first: it generates the SSH CA key pairs on first start.
+docker compose -f docker/compose-oinit.yaml up -d oinit-ca
+
+# 2. Sign the appliance's SSH host key and install the CA assets.
+docker compose -f docker/compose-oinit.yaml run --rm \
+    --entrypoint sh motley-cue /oinit-signup.sh
+
+# 3. Start the rest. The appliance refuses to start until step 2 is done.
+docker compose -f docker/compose-oinit.yaml up -d
+```
+
+- App: <http://localhost:8444> (oinit certificate login via the CA)
+- motley-cue API: <http://localhost/motley_cue/> (and
+  <https://motley-cue.localhost>)
+- oinit CA: <http://localhost:8082> and <https://oinit-ca.localhost>
+- SSH: `ssh -p 1022 oinit@localhost` after `oinit add -y localhost:1022 http://localhost:8082`
+
+The CA hostgroup in `docker/oinit-ca.ini` resolves two hostnames, both to the
+motley_cue appliance: `localhost` (`SSH_HOSTNAME`, used by the browser
+session and CLI) and `motley-cue` (`SSH_INTERNAL_HOSTNAME`, dialed by the
+`webssh` container).
+
+### Notes for both variants
 
 - `webssh` reads the repository-root `.env`; container-internal values
   (`INTERNAL_MC_ENDPOINT=http://caddy/motley_cue/`,
-  `SSH_INTERNAL_HOSTNAME=motley-cue`, `SSH_PORT=22`) are overridden in
-  `docker/compose.yaml`.
+  `SSH_INTERNAL_HOSTNAME=motley-cue`, `SSH_PORT=22`, and in the oinit
+  variant `SSH_METHOD=oinit` + `OINIT_ENDPOINT=http://oinit-ca:8082/oinit/api/v1`)
+  are overridden in the Compose files.
 - The default `MC_ENDPOINT=http://localhost/motley_cue/` is served by Caddy's
   plain-HTTP listener with CORS headers, so the browser does not need to trust
   the Caddy CA. It only works while the app itself is opened over HTTP
   (`http://localhost:8444`); an HTTPS app cannot call an HTTP endpoint
   (mixed content). Switch to `https://motley-cue.localhost/` after trusting
   the CA, or use an HTTPS URL in production.
+- The motley_cue API and (in the oinit variant) the oinit CA have their own
+  Caddy hostnames, so CLI tools (`mccli`, `oinit`) can reach them directly.
 - Use `http://localhost:8444` (the registered OAuth redirect base). If you
   browse through `https://webssh-oidc.localhost`, the redirect URI changes
   and must be registered as well; set `AUTH_URL` accordingly.
 - To update the app image:
 
   ```bash
-  docker compose -f docker/compose.yaml pull webssh
-  docker compose -f docker/compose.yaml up -d --no-deps webssh
+  docker compose -f docker/compose-pam.yaml pull webssh
+  docker compose -f docker/compose-pam.yaml up -d --no-deps webssh
   ```
 
 ---
 
 ## Mode 2: app on the host (`npm run dev`)
 
-Start only the infrastructure:
+Start only the infrastructure (either variant):
 
 ```bash
-docker compose -f docker/compose.yaml -f docker/compose.dev.yaml up -d caddy motley-cue
+docker compose -f docker/compose-pam.yaml -f docker/compose.dev.yaml up -d caddy motley-cue
+# or:
+docker compose -f docker/compose-oinit.yaml -f docker/compose.dev.yaml up -d caddy motley-cue oinit-ca
 ```
 
 `compose.dev.yaml` makes Caddy proxy `webssh-oidc.localhost` to
@@ -151,7 +194,9 @@ The root `.env` is written for this mode: Caddy publishes plain HTTP on
 `:80`, so the server-side motley-cue endpoint is
 `INTERNAL_MC_ENDPOINT=http://localhost/motley_cue/`, the browser-side one is
 `MC_ENDPOINT=http://localhost/motley_cue/` (no CA trust required), and sshd
-is dialed at `localhost:1022`.
+is dialed at `localhost:1022`. For the oinit variant, set
+`OINIT_ENDPOINT=http://localhost:8082/oinit/api/v1` in the root `.env`
+(the Compose files override this with the in-network URL).
 
 ---
 
@@ -159,8 +204,8 @@ is dialed at `localhost:1022`.
 
 The stack is hostname-parameterized. For a public VM:
 
-1. **DNS**: point `webssh.example.org` (app) and optionally
-   `motley-cue.example.org` (API) at the VM.
+1. **DNS**: point `webssh.example.org` (app), `motley-cue.example.org` (API)
+   and (oinit variant) `ca.example.org` at the VM.
 
 2. **Caddy hostnames**: create `docker/.env` (Compose reads it for variable
    substitution; this is separate from the repo-root `.env`):
@@ -168,12 +213,13 @@ The stack is hostname-parameterized. For a public VM:
    ```dotenv
    WEBSSH_HOST=webssh.example.org
    MC_HOST=motley-cue.example.org
+   OINIT_CA_HOST=ca.example.org
    ```
 
-3. **TLS**: in `docker/Caddyfile`, delete the two `tls internal` lines.
-   With the public hostnames above, Caddy obtains Let's Encrypt
-   certificates automatically (ports 80/443 must be reachable). Keep
-   `tls internal` only if clients can trust your local CA.
+3. **TLS**: in `docker/Caddyfile`, delete the `tls internal` lines. With the
+   public hostnames above, Caddy obtains Let's Encrypt certificates
+   automatically (ports 80/443 must be reachable). Keep `tls internal` only
+   if clients can trust your local CA.
 
 4. **App URL** in the repo-root `.env`:
 
@@ -192,17 +238,23 @@ The stack is hostname-parameterized. For a public VM:
 6. **Firewall**: expose `80/tcp` and `443/tcp`. Only `caddy` needs to be
    public; to stop publishing the app port, change the `webssh` port mapping
    to `127.0.0.1:8444:8444` (Caddy still reaches it over the Compose
-   network). Publish `1022/tcp` only if users should SSH directly.
+   network; server-side calls keep working). Publish `1022/tcp` only if
+   users should SSH directly, and `8082/tcp` only if the oinit CLI must
+   reach the CA on that port (Caddy's `https://ca.example.org` is the
+   preferred public endpoint).
 
 7. Start it:
 
    ```bash
-   docker compose -f docker/compose.yaml pull webssh
-   docker compose -f docker/compose.yaml up -d
+   docker compose -f docker/compose-pam.yaml pull
+   docker compose -f docker/compose-pam.yaml up -d
    ```
 
-   Set `WEBSSH_TAG` to `prerel` or a release version if you do not want
-   `latest`.
+   For the oinit variant follow the three steps in
+   [oinit variant](#oinit-variant), with `docker/compose-oinit.yaml`.
+
+   Set `WEBSSH_TAG`, `MC_TAG` (and `OINIT_CA_TAG` for the oinit variant) to
+   pinned versions if you do not want `latest`/the default.
 
    The SSH command shown in the UI uses `SSH_HOSTNAME`/`SSH_PORT`; for
    remote access set e.g. `SSH_HOSTNAME=ssh.example.org` and
@@ -221,14 +273,15 @@ Repo-root `.env` (shared by host dev and the container):
 | `ORIGIN` / `AUTH_URL`   | Public URL of the app (`AUTH_URL` needed behind a proxy)                                                   |
 | `MC_ENDPOINT`           | motley-cue URL used by the **browser** (local default: `http://localhost/motley_cue/`, no CA trust needed) |
 | `INTERNAL_MC_ENDPOINT`  | motley-cue URL used **server-side** (host dev mode)                                                        |
-| `SSH_HOSTNAME`          | Host shown in the SSH command                                                                              |
+| `SSH_HOSTNAME`          | Host shown in the SSH command and used in the oinit certificate request                                    |
 | `SSH_INTERNAL_HOSTNAME` | Host the app dials (host dev: `localhost`)                                                                 |
 | `SSH_PORT`              | SSH port the app dials / shows (host dev: `1022`)                                                          |
 | `SSH_METHOD`            | `mccli` (default) or `oinit`                                                                               |
+| `OINIT_ENDPOINT`        | oinit CA API base URL for `SSH_METHOD=oinit` (host dev: `http://localhost:8082/oinit/api/v1`)               |
 | `NODE_ENV`              | `development` picks `config/development.yml`; use `production` with HTTPS                                  |
 | `LOG_LEVEL`             | `debug` prints tokens — use `info` outside development                                                     |
 
-motley-cue (`docker/motley-cue/config/motley_cue.conf`):
+motley_cue (`docker/motley-cue-config/motley_cue.conf`):
 
 - One `[authorisation.<name>]` section per OP: `op_url` and `scopes`.
 - `scopes` must be requestable by the OAuth client; otherwise the OP returns
@@ -237,19 +290,20 @@ motley-cue (`docker/motley-cue/config/motley_cue.conf`):
 - `authorise_all = True` allows every user of that OP (`egi-dev`/`egi-demo`);
   `authorised_vos`/`authorised_users` restrict access. With the
   `entitlements` scope, set `vo_claim = entitlements` as well.
-- OTP state lives in the `motley_cue_cache`/`motley_cue_lib` volumes
-  (`/var/cache/motley_cue`, `/var/lib/motley_cue`).
+- OTP state and the account database live in the `motley_cue_state` volume
+  (`/state`: `motley_cue/tokenmap.db`, `motley_cue/motley_cue.key`, `etc/`,
+  `home/`, `ssh/`). Back it up before recreating the container.
 
 ---
 
 ## Troubleshooting
 
 - **`/etc/hosts` missing** → only affects the optional HTTPS hostnames
-  (`https://motley-cue.localhost`, `https://webssh-oidc.localhost`) and
-  therefore Caddy's healthcheck. The default local setup
-  (`http://localhost:8444` + `http://localhost/motley_cue/`) does not need
-  the `/etc/hosts` entries, but add them if Caddy reports unhealthy or you
-  want the HTTPS hostnames.
+  (`https://motley-cue.localhost`, `https://webssh-oidc.localhost`,
+  `https://oinit-ca.localhost`) and therefore Caddy's healthcheck. The
+  default local setup (`http://localhost:8444` +
+  `http://localhost/motley_cue/`) does not need the `/etc/hosts` entries,
+  but add them if Caddy reports unhealthy or you want the HTTPS hostnames.
 - **Untrusted CA** → `NET::ERR_CERT_AUTHORITY_INVALID` /
   `Failed to fetch` when `MC_ENDPOINT=https://motley-cue.localhost/`.
   The default local `MC_ENDPOINT=http://localhost/motley_cue/` avoids this
@@ -257,7 +311,7 @@ motley-cue (`docker/motley-cue/config/motley_cue.conf`):
   regenerated whenever the `caddy_data` volume is recreated):
 
   ```bash
-  docker compose -f docker/compose.yaml exec caddy \
+  docker compose -f docker/compose-pam.yaml exec caddy \
     cat /data/caddy/pki/authorities/local/root.crt > caddy-local-ca.crt
 
   # Chromium/Chrome (close the browser first)
@@ -277,22 +331,34 @@ motley-cue (`docker/motley-cue/config/motley_cue.conf`):
   an HTTPS page cannot call `http://localhost/motley_cue/`. Set
   `MC_ENDPOINT` to the HTTPS API URL (and trust/replace the CA, or use a
   real certificate).
-- **Port already in use** → an old stack is still running. Stop it
-  (`docker compose down` in the old project directory) before starting this
+- **oinit variant: appliance restart-loops with
+  `oinit is not provisioned`** → run the signing step
+  (`run --rm --entrypoint sh motley-cue /oinit-signup.sh`) after the CA has
+  started, then `up -d` again.
+- **oinit variant: signing step fails with `No such file` for the CA keys**
+  → the CA has not started yet (its keys are generated on first start).
+  Run `up -d oinit-ca` first and check
+  `docker compose -f docker/compose-oinit.yaml logs oinit-ca`.
+- **oinit variant: certificate request returns 404** → the hostname used in
+  the request is not in `docker/oinit-ca.ini`. The `webssh` container asks
+  for `motley-cue` and the browser session for `SSH_HOSTNAME`
+  (default `localhost`); both entries must exist.
+- **Port already in use** → the other variant or an old stack is still
+  running. Stop it (`docker compose -f <file> down`) before starting this
   one.
 - **`invalid_scope` at login** → the OP rejected the scopes from
   motley-cue's `/info/op`; align `scopes` in `motley_cue.conf` with what the
   OAuth client is allowed to request.
-- **SSH connection hangs ~20 s** → PAM cannot reach motley-cue. The image's
-  `/etc/pam.d/pam-ssh-oidc-config.ini` verifies via
-  `http://mc_endpoint:8080/verify_user`; this stack provides that name as a
-  Caddy network alias. Check `docker compose logs caddy motley-cue`.
+- **SSH connection hangs ~20 s** → PAM cannot reach the motley_cue API. In
+  the all-in-one appliance the API runs in the same container and is
+  verified via `http://127.0.0.1:8080/verify_user`; check
+  `docker compose logs motley-cue`.
 - **Container DNS** → if the host's resolver is unreachable from Docker
   (VPN/split-horizon setups), add `dns:` entries to the `webssh` service.
 - **Logs**:
 
   ```bash
-  docker compose -f docker/compose.yaml logs -f webssh
-  docker compose -f docker/compose.yaml logs -f motley-cue
-  docker compose -f docker/compose.yaml logs -f caddy
+  docker compose -f docker/compose-pam.yaml logs -f webssh
+  docker compose -f docker/compose-pam.yaml logs -f motley-cue
+  docker compose -f docker/compose-pam.yaml logs -f caddy
   ```
