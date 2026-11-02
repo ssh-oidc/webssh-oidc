@@ -62,24 +62,28 @@ List of supported providers and their corresponding ids:
 You can then run the full stack (app + motley-cue + Caddy) with:
 
 ```bash
-docker compose -f docker/compose.yaml pull webssh
-docker compose -f docker/compose.yaml up -d
+docker compose -f docker/compose-pam.yaml pull
+docker compose -f docker/compose-pam.yaml up -d
 ```
+
+There are two stack variants, both using the published all-in-one motley_cue
+appliance image: `docker/compose-pam.yaml` (PAM token login) and
+`docker/compose-oinit.yaml` (oinit certificate login, with an oinit CA). The
+oinit variant needs a one-time host-key signing step — see
+[docker/README.md](docker/README.md).
 
 To try the prerelease image:
 
 ```bash
-WEBSSH_TAG=prerel docker compose -f docker/compose.yaml pull webssh
-WEBSSH_TAG=prerel docker compose -f docker/compose.yaml up -d
+WEBSSH_TAG=prerel docker compose -f docker/compose-pam.yaml pull
+WEBSSH_TAG=prerel docker compose -f docker/compose-pam.yaml up -d
 ```
-
-The `motley-cue` image is still built locally from `docker/motley-cue`.
 
 Or run only the infrastructure in Docker and the app on the host with
 `npm run dev` — see [docker/README.md](docker/README.md) for both workflows,
-remote-VM deployment, and troubleshooting. `docker/` bundles the motley-cue
-image (motley-cue API + sshd + PAM) and the Caddy configuration, so no
-separate repository/compose file is needed.
+remote-VM deployment, and troubleshooting. `docker/` bundles the motley_cue
+appliance configuration, the oinit CA configuration, and the Caddy
+configuration, so no separate repository/compose file is needed.
 
 If you're not using TLS (not recommended, only do this when you're running the code locally), set `NODE_ENV=development` in the `.env` file.
 

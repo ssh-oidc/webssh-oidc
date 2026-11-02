@@ -1,41 +1,57 @@
-# Full stack: Caddy + motley-cue (with sshd) + webssh-oidc.
+# Full stack (PAM variant): Caddy + motley_cue all-in-one (PAM login) + webssh-oidc.
+#
+# The motley_cue service is the official all-in-one appliance image
+# (sshoidc/motley-cue-allinone:<version>-pam): motley_cue API + local_unix
+# account provisioning + sshd with pam_ssh_oidc token login.
 #
 # Run everything (webssh-oidc in a container):
-#   docker compose -f docker/compose.yaml pull webssh
-#   docker compose -f docker/compose.yaml up -d
+#   docker compose -f docker/compose-pam.yaml pull
+#   docker compose -f docker/compose-pam.yaml up -d
 #
 # The app image is published by CI. Use WEBSSH_TAG=prerel for the
 # prerelease image, or a version such as WEBSSH_TAG=0.5.0 for a release.
+# MC_TAG selects the motley_cue image version.
 #
 # Run only the infrastructure and develop webssh-oidc on the host:
-#   docker compose -f docker/compose.yaml -f docker/compose.dev.yaml up -d caddy motley-cue
+#   docker compose -f docker/compose-pam.yaml -f docker/compose.dev.yaml up -d caddy motley-cue
 #   npm run dev      # SvelteKit + SSH bridge on :8444
+#
+# The oinit variant of the stack is docker/compose-oinit.yaml (Caddy +
+# motley_cue all-in-one with oinit login + oinit CA + webssh-oidc).
 #
 # See docker/README.md for details.
 
-name: webssh-oidc
+name: webssh-oidc-pam
 
 services:
   motley-cue:
-    build:
-      context: ./motley-cue
-      dockerfile: Dockerfile
-    image: motley-cue-pam-ssh
-    hostname: ssh-host
+    image: sshoidc/motley-cue-allinone:${MC_TAG:-0.8.9}-pam
+    hostname: motley-cue
     restart: unless-stopped
     ports:
       # Published for direct SSH access/testing from the host.
       - '1022:22'
     environment:
-      UID: ${UID:-1000}
-      GID: ${GID:-1000}
+      MOTLEY_CUE_VARIANT: pam
+      MOTLEY_CUE_CONFIG: /etc/motley_cue/motley_cue.conf
+      FEUDAL_ADAPTER_CONFIG: /etc/motley_cue/feudal_adapter.conf
+      # caddy (and the oinit CA in the oinit variant) reach the API over the
+      # compose network.
+      BIND: 0.0.0.0:8080
     volumes:
-      - ./motley-cue/config:/config_files
-      - motley_cue_sock:/run/motley_cue
-      - motley_cue_cache:/var/cache/motley_cue
-      - motley_cue_lib:/var/lib/motley_cue
+      - ./motley-cue-config/motley_cue.conf:/etc/motley_cue/motley_cue.conf:ro
+      - ./motley-cue-config/feudal_adapter.conf:/etc/motley_cue/feudal_adapter.conf:ro
+      # accounts, homes, SSH host keys, OTP token database
+      - motley_cue_state:/state
     healthcheck:
-      test: ['CMD', 'nc', '-z', 'localhost', '22']
+      # The appliance image has no netcat; use its Python to probe the API.
+      test:
+        [
+          'CMD',
+          'python3',
+          '-c',
+          'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8080/", timeout=3)'
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -62,17 +78,10 @@ services:
       # from docker/.env / the shell, not from the repo-root .env.
       WEBSSH_HOST: ${WEBSSH_HOST:-webssh-oidc.localhost}
       MC_HOST: ${MC_HOST:-motley-cue.localhost}
-    networks:
-      default:
-        aliases:
-          # pam_ssh_oidc verifies tokens against
-          # http://mc_endpoint:8080/verify_user (see the motley-cue image).
-          - mc_endpoint
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
-      - motley_cue_sock:/run/motley_cue:ro
     depends_on:
       motley-cue:
         condition: service_healthy
@@ -113,8 +122,6 @@ services:
     stop_grace_period: 2s
 
 volumes:
-  motley_cue_sock:
-  motley_cue_cache:
-  motley_cue_lib:
+  motley_cue_state:
   caddy_data:
   caddy_config:

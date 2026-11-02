@@ -17,3 +17,4 @@ config/default.html
 
 # Remote-VM overrides for the docker/ stack (hostnames)
 docker/.env
+docker/oinit-ca.prod.ini
