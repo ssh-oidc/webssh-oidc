@@ -37,8 +37,9 @@ fi
 # /state may be read-only in other setups.
 cp /state/ssh/ssh_host_ed25519_key.pub /tmp/host-key.pub
 # Principals: the internal compose name (dialed by webssh) and the published
-# host name used by CLI logins.
-ssh-keygen -q -s /ca/host-ca -I webssh-oidc-host -h -n 'motley-cue,localhost' \
+# host name(s) used by CLI logins. Set OINIT_SSH_HOSTS in docker/.env to add
+# the public host name, e.g. "motley-cue,localhost,ssh.example.org".
+ssh-keygen -q -s /ca/host-ca -I webssh-oidc-host -h -n "${OINIT_SSH_HOSTS:-motley-cue,localhost}" \
     /tmp/host-key.pub
 cp /tmp/host-key-cert.pub /state/ssh/oinit/host-key-cert.pub
 

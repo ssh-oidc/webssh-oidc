@@ -19,6 +19,10 @@
 # OINIT_CA_TAG selects the oinit image version, MC_TAG the motley_cue image
 # version, WEBSSH_TAG the app image version.
 #
+# For a public host, add the production override (loopback-only app/CA ports,
+# publicly trusted TLS):
+#   docker compose -f docker/compose-oinit.yaml -f docker/compose.prod.yaml ...
+#
 # The PAM variant of the stack is docker/compose-pam.yaml.
 #
 # See docker/README.md for details.
@@ -39,6 +43,8 @@ services:
       FEUDAL_ADAPTER_CONFIG: /etc/motley_cue/feudal_adapter.conf
       # caddy reaches the API over the compose network.
       BIND: 0.0.0.0:8080
+      # Principals used when signing the SSH host key (docker/oinit-signup.sh).
+      OINIT_SSH_HOSTS: ${OINIT_SSH_HOSTS:-motley-cue,localhost}
     volumes:
       - ./motley-cue-config/motley_cue.conf:/etc/motley_cue/motley_cue.conf:ro
       - ./motley-cue-config/feudal_adapter.conf:/etc/motley_cue/feudal_adapter.conf:ro
@@ -72,7 +78,7 @@ services:
     volumes:
       # generated CA key pairs (kept across restarts)
       - ca_state:/etc/oinit
-      - ./oinit-ca.ini:/etc/oinit/ca-config.ini:ro
+      - ./${OINIT_CA_CONFIG:-oinit-ca.ini}:/etc/oinit/ca-config.ini:ro
     # The image ships its own HEALTHCHECK (GET /health on :8082).
 
   caddy:
@@ -99,7 +105,7 @@ services:
       MC_HOST: ${MC_HOST:-motley-cue.localhost}
       OINIT_CA_HOST: ${OINIT_CA_HOST:-oinit-ca.localhost}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./${CADDYFILE:-Caddyfile}:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:

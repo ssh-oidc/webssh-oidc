@@ -32,8 +32,10 @@ The variants cannot run at the same time (they publish the same ports).
 docker/
   compose-pam.yaml      # full stack, PAM token login
   compose-oinit.yaml    # full stack, oinit certificate login
+  compose.prod.yaml     # override: public host (loopback app/CA ports)
   compose.dev.yaml      # override: Caddy proxies to the host (npm run dev)
   Caddyfile             # TLS + routing; hostnames overridable via env
+  Caddyfile.prod        # same, without tls internal (public ACME certs)
   motley-cue-config/
     motley_cue.conf     # OPs, scopes, user mapping, OTP storage
     feudal_adapter.conf # local_unix backend, shells, groups
@@ -200,66 +202,106 @@ is dialed at `localhost:1022`. For the oinit variant, set
 
 ---
 
-## Running on a remote VM
+## Running on a public host
 
-The stack is hostname-parameterized. For a public VM:
+The reference deployment runs the oinit variant on
+`ssh-oidc-cicd.vm.fedcloud.eu` (wildcard DNS), with these hostnames:
 
-1. **DNS**: point `webssh.example.org` (app), `motley-cue.example.org` (API)
-   and (oinit variant) `ca.example.org` at the VM.
+| Role | Hostname |
+| ---- | -------- |
+| App | `webssh.ssh-oidc-cicd.vm.fedcloud.eu` |
+| motley-cue API (browser, `mccli`) | `motley-cue.ssh-oidc-cicd.vm.fedcloud.eu` |
+| oinit CA API (`oinit` CLI) | `ca.ssh-oidc-cicd.vm.fedcloud.eu` |
+| SSH login | `ssh.ssh-oidc-cicd.vm.fedcloud.eu:1022` |
 
-2. **Caddy hostnames**: create `docker/.env` (Compose reads it for variable
-   substitution; this is separate from the repo-root `.env`):
+Clients use those Caddy hostnames only; `8082` and `8444` stay bound to
+loopback (Docker's published ports bypass host firewalls, so the production
+override removes that exposure).
 
-   ```dotenv
-   WEBSSH_HOST=webssh.example.org
-   MC_HOST=motley-cue.example.org
-   OINIT_CA_HOST=ca.example.org
-   ```
+1. **Docker Compose ≥ 2.24** on the host (needed for `!override`).
 
-3. **TLS**: in `docker/Caddyfile`, delete the `tls internal` lines. With the
-   public hostnames above, Caddy obtains Let's Encrypt certificates
-   automatically (ports 80/443 must be reachable). Keep `tls internal` only
-   if clients can trust your local CA.
-
-4. **App URL** in the repo-root `.env`:
+2. **`docker/.env`** (Compose reads it from the `docker/` directory; separate
+   from the repo-root `.env`):
 
    ```dotenv
-   ORIGIN=https://webssh.example.org
-   AUTH_URL=https://webssh.example.org
-   MC_ENDPOINT=https://motley-cue.example.org/
+   WEBSSH_HOST=webssh.ssh-oidc-cicd.vm.fedcloud.eu
+   MC_HOST=motley-cue.ssh-oidc-cicd.vm.fedcloud.eu
+   OINIT_CA_HOST=ca.ssh-oidc-cicd.vm.fedcloud.eu
+   CADDYFILE=Caddyfile.prod
+   OINIT_CA_CONFIG=oinit-ca.prod.ini
+   OINIT_SSH_HOSTS=motley-cue,localhost,ssh.ssh-oidc-cicd.vm.fedcloud.eu
+   MC_TAG=prerel
+   OINIT_CA_TAG=prerel
    ```
 
-5. **OAuth clients**: register
-   `https://webssh.example.org/auth/callback/<provider-id>` at every OP and
-   put the corresponding client IDs/secrets in `config/production.yml`
-   (`NODE_ENV=production`). Auth.js then uses secure cookies, so the app
-   must be served over HTTPS (through Caddy).
+3. **`docker/oinit-ca.prod.ini`** — copy `docker/oinit-ca.ini` and add the
+   public SSH hostname (clients ask the CA for a certificate for the name
+   shown in the SSH command):
 
-6. **Firewall**: expose `80/tcp` and `443/tcp`. Only `caddy` needs to be
-   public; to stop publishing the app port, change the `webssh` port mapping
-   to `127.0.0.1:8444:8444` (Caddy still reaches it over the Compose
-   network; server-side calls keep working). Publish `1022/tcp` only if
-   users should SSH directly, and `8082/tcp` only if the oinit CLI must
-   reach the CA on that port (Caddy's `https://ca.example.org` is the
-   preferred public endpoint).
+   ```ini
+   [webssh]
+   motley-cue = http://motley-cue:8080
+   localhost = http://motley-cue:8080
+   ssh.ssh-oidc-cicd.vm.fedcloud.eu = http://motley-cue:8080
+   ```
 
-7. Start it:
+   Also add the public name to `OINIT_SSH_HOSTS` (above) so the host
+   certificate is signed with it as principal.
+
+4. **TLS** is handled by `Caddyfile.prod` (no `tls internal`): Caddy obtains
+   Let's Encrypt certificates for the three hostnames automatically. Ports
+   80/443 must be reachable.
+
+5. **Repo-root `.env`**:
+
+   ```dotenv
+   AUTH_SECRET=<openssl rand -base64 32>
+   ORIGIN=https://webssh.ssh-oidc-cicd.vm.fedcloud.eu
+   AUTH_URL=https://webssh.ssh-oidc-cicd.vm.fedcloud.eu
+   MC_ENDPOINT=https://motley-cue.ssh-oidc-cicd.vm.fedcloud.eu/
+   SSH_HOSTNAME=ssh.ssh-oidc-cicd.vm.fedcloud.eu
+   SSH_PORT=1022
+   NODE_ENV=production
+   ```
+
+6. **OAuth clients**: register
+   `https://webssh.ssh-oidc-cicd.vm.fedcloud.eu/auth/callback/<provider-id>`
+   at every OP and put the client IDs/secrets in `config/production.yml`.
+   Put the privacy policy in `config/docs/privacy.md`.
+
+7. **Firewall**: expose `80/tcp`, `443/tcp` and `1022/tcp`. Do not expose
+   `8082`, `8080` or `8444`.
+
+8. **Start** (oinit variant, production override):
 
    ```bash
-   docker compose -f docker/compose-pam.yaml pull
-   docker compose -f docker/compose-pam.yaml up -d
+   COMPOSE='docker compose -f docker/compose-oinit.yaml -f docker/compose.prod.yaml'
+   $COMPOSE up -d oinit-ca
+   $COMPOSE run --rm --entrypoint sh motley-cue /oinit-signup.sh
+   $COMPOSE up -d --wait
    ```
 
-   For the oinit variant follow the three steps in
-   [oinit variant](#oinit-variant), with `docker/compose-oinit.yaml`.
+   The three steps are only needed on first start; the CA keys and appliance
+   state live in named volumes afterwards.
 
-   Set `WEBSSH_TAG`, `MC_TAG` (and `OINIT_CA_TAG` for the oinit variant) to
-   pinned versions if you do not want `latest`/the default.
+### Continuous deployment
 
-   The SSH command shown in the UI uses `SSH_HOSTNAME`/`SSH_PORT`; for
-   remote access set e.g. `SSH_HOSTNAME=ssh.example.org` and
-   `SSH_PORT=1022` in the root `.env` (the container still dials
-   `motley-cue:22`).
+The GitHub Actions workflows deploy onto this host on every push to
+`prerel` (see the repository root `README.md`). Each pipeline SSHes in,
+serializes on `/tmp/webssh-oidc-deploy.lock` and restarts only its own
+container:
+
+| Repo | Container(s) restarted | Image tag |
+| ---- | ---------------------- | --------- |
+| `webssh-oidc` | `webssh`, `caddy` | immutable `sha-<short>` built in the run |
+| `motley_cue` | `motley-cue` (all-in-one appliance) | `prerel-oinit` |
+| `oinit` | `oinit-ca` | `prerel` |
+
+The host checkout lives at `/opt/webssh-oidc` and is reset to
+`origin/prerel` by the webssh-oidc pipeline. The other two pipelines only
+run Compose against that checkout. Files that must survive the reset (`.env`,
+`docker/.env`, `docker/oinit-ca.prod.ini`, `config/production.yml`,
+`config/docs/privacy.md`) are gitignored.
 
 ---
 
@@ -280,6 +322,20 @@ Repo-root `.env` (shared by host dev and the container):
 | `OINIT_ENDPOINT`        | oinit CA API base URL for `SSH_METHOD=oinit` (host dev: `http://localhost:8082/oinit/api/v1`)               |
 | `NODE_ENV`              | `development` picks `config/development.yml`; use `production` with HTTPS                                  |
 | `LOG_LEVEL`             | `debug` prints tokens — use `info` outside development                                                     |
+
+`docker/.env` (Compose variable substitution; not passed to the containers):
+
+| Variable           | Meaning                                                                                   |
+| ------------------ | ----------------------------------------------------------------------------------------- |
+| `WEBSSH_HOST`      | Public app hostname used by Caddy                                                          |
+| `MC_HOST`          | Public motley-cue API hostname used by Caddy                                               |
+| `OINIT_CA_HOST`    | Public oinit CA hostname used by Caddy                                                     |
+| `CADDYFILE`        | Caddyfile to mount (default `Caddyfile`; use `Caddyfile.prod` for public ACME certs)       |
+| `OINIT_CA_CONFIG`  | oinit CA config file to mount (default `oinit-ca.ini`)                                     |
+| `OINIT_SSH_HOSTS`  | Comma-separated principals for the signed SSH host key (default `motley-cue,localhost`)     |
+| `MC_TAG`           | motley_cue appliance image version (default `0.8.9`; `prerel` on the CD host)              |
+| `OINIT_CA_TAG`     | oinit CA image version (default `latest`; `prerel` on the CD host)                         |
+| `WEBSSH_TAG`       | webssh-oidc image version (default `latest`; set per deploy by CI)                         |
 
 motley_cue (`docker/motley-cue-config/motley_cue.conf`):
 
@@ -340,9 +396,10 @@ motley_cue (`docker/motley-cue-config/motley_cue.conf`):
   Run `up -d oinit-ca` first and check
   `docker compose -f docker/compose-oinit.yaml logs oinit-ca`.
 - **oinit variant: certificate request returns 404** → the hostname used in
-  the request is not in `docker/oinit-ca.ini`. The `webssh` container asks
-  for `motley-cue` and the browser session for `SSH_HOSTNAME`
-  (default `localhost`); both entries must exist.
+  the request is not in the CA config (`docker/oinit-ca.ini`, or the file
+  selected by `OINIT_CA_CONFIG`). The app requests a certificate for
+  `SSH_HOSTNAME` (default `localhost`), so that name must be a key in the
+  `[webssh]` section (in production: the `ssh.` hostname).
 - **Port already in use** → the other variant or an old stack is still
   running. Stop it (`docker compose -f <file> down`) before starting this
   one.

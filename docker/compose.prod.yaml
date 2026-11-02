@@ -1,0 +1,21 @@
+# Production override for the oinit stack (docker/compose-oinit.yaml).
+#
+#   docker compose -f docker/compose-oinit.yaml -f docker/compose.prod.yaml ...
+#
+# Only Caddy (80/443) and the SSH port stay reachable from the internet:
+# users log in over SSH, everything else goes through Caddy's hostnames.
+# The app port and the CA port are bound to loopback for host-side debugging
+# (Docker's published ports bypass host firewalls such as ufw, so this is
+# where that exposure is removed).
+#
+# Requires Docker Compose >= 2.24 (for !override). This file references the
+# oinit variant only; do not combine it with docker/compose-pam.yaml.
+
+services:
+  webssh:
+    ports: !override
+      - '127.0.0.1:8444:8444'
+
+  oinit-ca:
+    ports: !override
+      - '127.0.0.1:8082:8082'
