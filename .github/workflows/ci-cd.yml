@@ -130,6 +130,12 @@ jobs:
           set -eu
           cd /opt/webssh-oidc
           git fetch --prune --tags origin
+          for f in docker/compose-oinit.yaml docker/compose.prod.yaml; do
+            git cat-file -e "v$VERSION:$f" || {
+              echo "ERROR: v$VERSION does not contain $f; not a deployable manifest." >&2
+              exit 1
+            }
+          done
           git -c advice.detachedHead=false checkout --force --detach "v$VERSION"
           git describe --exact-match --tags HEAD
           if grep -q '^WEBSSH_TAG=' docker/.env; then
