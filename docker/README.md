@@ -88,7 +88,7 @@ repository root.
 
 The `webssh` image is pulled from `sshoidc/webssh-oidc` (default tag
 `latest`; use `WEBSSH_TAG=prerel` for the prerelease image or a version such
-as `WEBSSH_TAG=0.5.0` for a release). The motley_cue appliance image is
+as `WEBSSH_TAG=0.2.4` for a release). The motley_cue appliance image is
 pulled from `sshoidc/motley-cue-allinone`; select its version with `MC_TAG`
 (default `0.8.9`).
 
@@ -230,9 +230,12 @@ override removes that exposure).
    CADDYFILE=Caddyfile.prod
    OINIT_CA_CONFIG=oinit-ca.prod.ini
    OINIT_SSH_HOSTS=motley-cue,localhost,ssh.ssh-oidc-cicd.vm.fedcloud.eu
-   MC_TAG=prerel
-   OINIT_CA_TAG=prerel
+   MC_TAG=0.8.9
+   OINIT_CA_TAG=1.3.2
+   WEBSSH_TAG=0.2.4
    ```
+
+   The CI deploy jobs overwrite these pins with the released versions.
 
 3. **`docker/oinit-ca.prod.ini`** — copy `docker/oinit-ca.ini` and add the
    public SSH hostname (clients ask the CA for a certificate for the name
@@ -286,21 +289,26 @@ override removes that exposure).
 
 ### Continuous deployment
 
-The GitHub Actions workflows deploy onto this host on every push to
-`prerel` (see the repository root `README.md`). Each pipeline SSHes in,
-serializes on `/tmp/webssh-oidc-deploy.lock` and restarts only its own
+The GitHub Actions workflows deploy releases onto this host when a
+non-prerelease `vX.Y.Z` tag is pushed on the release branch (`main` for
+webssh-oidc, `master` for motley_cue and oinit). Pushes to `prerel` only
+publish the moving `prerel` images; they do not deploy. Each pipeline SSHes
+in, serializes on `/tmp/webssh-oidc-deploy.lock` and restarts only its own
 container:
 
 | Repo | Container(s) restarted | Image tag |
 | ---- | ---------------------- | --------- |
-| `webssh-oidc` | `webssh`, `caddy` | immutable `sha-<short>` built in the run |
-| `motley_cue` | `motley-cue` (all-in-one appliance) | `prerel-oinit` |
-| `oinit` | `oinit-ca` | `prerel` |
+| `webssh-oidc` | `webssh`, `caddy` | release version, e.g. `0.2.4` |
+| `motley_cue` | `motley-cue` (all-in-one appliance) | release version, e.g. `0.8.9-oinit` |
+| `oinit` | `oinit-ca` | release version, e.g. `1.3.3` |
 
-The host checkout lives at `/opt/webssh-oidc` and is reset to
-`origin/prerel` by the webssh-oidc pipeline. The other two pipelines only
-run Compose against that checkout. Files that must survive the reset (`.env`,
-`docker/.env`, `docker/oinit-ca.prod.ini`, `config/production.yml`,
+The host checkout lives at `/opt/webssh-oidc` and is checked out to the
+webssh-oidc release tag by its pipeline, so it is also the deployment
+manifest: release and deploy webssh-oidc first if a release changes these
+Compose files. The motley_cue and oinit pipelines only update their image
+pins (`MC_TAG`, `OINIT_CA_TAG`) in `docker/.env` and run Compose against that
+checkout. Files that must survive the checkout (`.env`, `docker/.env`,
+`docker/oinit-ca.prod.ini`, `config/production.yml`,
 `config/docs/privacy.md`) are gitignored.
 
 ---
@@ -333,9 +341,9 @@ Repo-root `.env` (shared by host dev and the container):
 | `CADDYFILE`        | Caddyfile to mount (default `Caddyfile`; use `Caddyfile.prod` for public ACME certs)       |
 | `OINIT_CA_CONFIG`  | oinit CA config file to mount (default `oinit-ca.ini`)                                     |
 | `OINIT_SSH_HOSTS`  | Comma-separated principals for the signed SSH host key (default `motley-cue,localhost`)     |
-| `MC_TAG`           | motley_cue appliance image version (default `0.8.9`; `prerel` on the CD host)              |
-| `OINIT_CA_TAG`     | oinit CA image version (default `latest`; `prerel` on the CD host)                         |
-| `WEBSSH_TAG`       | webssh-oidc image version (default `latest`; set per deploy by CI)                         |
+| `MC_TAG`           | motley_cue appliance image version (default `0.8.9`; pinned to the release by CI)         |
+| `OINIT_CA_TAG`     | oinit CA image version (default `latest`; pinned to the release by CI)                    |
+| `WEBSSH_TAG`       | webssh-oidc image version (default `latest`; pinned to the release by CI)                 |
 
 motley_cue (`docker/motley-cue-config/motley_cue.conf`):
 

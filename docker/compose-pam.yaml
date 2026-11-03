@@ -9,7 +9,7 @@
 #   docker compose -f docker/compose-pam.yaml up -d
 #
 # The app image is published by CI. Use WEBSSH_TAG=prerel for the
-# prerelease image, or a version such as WEBSSH_TAG=0.5.0 for a release.
+# prerelease image, or a version such as WEBSSH_TAG=0.2.4 for a release.
 # MC_TAG selects the motley_cue image version.
 #
 # Run only the infrastructure and develop webssh-oidc on the host:
