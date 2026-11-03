@@ -29,7 +29,7 @@ npm run start
 
 The application image is published as `sshoidc/webssh-oidc`. Compose uses the
 `latest` tag by default; use `WEBSSH_TAG=prerel` for the prerelease image or a
-version such as `WEBSSH_TAG=0.2.4` for a release.
+version such as `WEBSSH_TAG=0.5.0` for a release.
 
 To run the docker image, you first need to configure the environment variables.
 

@@ -88,7 +88,7 @@ repository root.
 
 The `webssh` image is pulled from `sshoidc/webssh-oidc` (default tag
 `latest`; use `WEBSSH_TAG=prerel` for the prerelease image or a version such
-as `WEBSSH_TAG=0.2.4` for a release). The motley_cue appliance image is
+as `WEBSSH_TAG=0.5.0` for a release). The motley_cue appliance image is
 pulled from `sshoidc/motley-cue-allinone`; select its version with `MC_TAG`
 (default `0.8.9`).
 
@@ -232,7 +232,7 @@ override removes that exposure).
    OINIT_SSH_HOSTS=motley-cue,localhost,ssh.ssh-oidc-cicd.vm.fedcloud.eu
    MC_TAG=0.8.9
    OINIT_CA_TAG=1.3.2
-   WEBSSH_TAG=0.2.4
+   WEBSSH_TAG=0.5.0
    ```
 
    The CI deploy jobs overwrite these pins with the released versions.
@@ -298,7 +298,7 @@ container:
 
 | Repo | Container(s) restarted | Image tag |
 | ---- | ---------------------- | --------- |
-| `webssh-oidc` | `webssh`, `caddy` | release version, e.g. `0.2.4` |
+| `webssh-oidc` | `webssh`, `caddy` | release version, e.g. `0.5.0` |
 | `motley_cue` | `motley-cue` (all-in-one appliance) | release version, e.g. `0.8.9-oinit` |
 | `oinit` | `oinit-ca` | release version, e.g. `1.3.3` |
 
