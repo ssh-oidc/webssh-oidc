@@ -1,0 +1,69 @@
+# Caddy frontend for a public deployment of the webssh-oidc + motley-cue
+# stack (docker/compose-oinit.yaml + docker/compose.prod.yaml).
+#
+# Unlike docker/Caddyfile this file has no `tls internal` directives, so
+# Caddy obtains publicly trusted (Let's Encrypt) certificates for the
+# hostnames configured in docker/.env:
+#   WEBSSH_HOST, MC_HOST, OINIT_CA_HOST
+# Ports 80 and 443 must be reachable from the internet.
+#
+# The `www.` redirect blocks from the development Caddyfile are intentionally
+# absent: a `*.example.org` wildcard only covers a single label, so
+# `www.<host>` would not resolve.
+#
+# Select this file with CADDYFILE=Caddyfile.prod in docker/.env.
+
+# webssh-oidc application.
+{$WEBSSH_HOST:webssh-oidc.localhost} {
+	reverse_proxy {$WEBSSH_UPSTREAM:webssh:8444}
+}
+
+# motley-cue API, used directly by the browser (CORS) and by CLI clients
+# (mccli, oinit). Exposed on its own hostname so it is reachable from the
+# internet in deployments with a public WEBSSH_HOST.
+{$MC_HOST:motley-cue.localhost} {
+	header Access-Control-Allow-Origin *
+	header Access-Control-Allow-Credentials true
+	header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+	header Access-Control-Allow-Headers "Content-Type, Accept, Authorization"
+
+	@options method OPTIONS
+	header @options Access-Control-Allow-Origin *
+	header @options Access-Control-Allow-Credentials true
+	header @options Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+	header @options Access-Control-Allow-Headers "Content-Type, Accept, Authorization"
+	header @options Content-Type "text/plain charset=UTF-8"
+	respond @options "" 204
+
+	reverse_proxy motley-cue:8080
+}
+
+# oinit CA API, used by the oinit CLI and server-side by webssh-oidc.
+{$OINIT_CA_HOST:oinit-ca.localhost} {
+	reverse_proxy oinit-ca:8082
+}
+
+# Plain-HTTP endpoint for internal calls:
+#   - from the host (npm run dev): http://localhost/motley_cue/
+#   - from containers on the compose network: http://caddy/motley_cue/
+#   - legacy pam_ssh_oidc contract: http://mc_endpoint:8080/verify_user
+# Traffic never leaves the host/docker network, so plain HTTP is fine.
+http://caddy, http://localhost, :8080 {
+	respond /health 200
+
+	# Same CORS behavior as the HTTPS API vhost, so the browser can use
+	# MC_ENDPOINT=http://localhost/motley_cue/ without trusting the CA.
+	header Access-Control-Allow-Origin *
+	header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+	header Access-Control-Allow-Headers "Content-Type, Accept, Authorization"
+
+	@options method OPTIONS
+	header @options Access-Control-Allow-Origin *
+	header @options Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+	header @options Access-Control-Allow-Headers "Content-Type, Accept, Authorization"
+	header @options Content-Type "text/plain charset=UTF-8"
+	respond @options "" 204
+
+	uri strip_prefix /motley_cue
+	reverse_proxy motley-cue:8080
+}

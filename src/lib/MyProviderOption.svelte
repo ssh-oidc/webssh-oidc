@@ -1,25 +1,27 @@
 <script lang="ts">
-	import { onMount, createEventDispatcher } from 'svelte';
+	import { createEventDispatcher } from 'svelte';
 	import { providers, generic, type Provider } from '$lib/providers';
 
 	export let provider_issuer: string;
 
 	const dispatch = createEventDispatcher<{ click: string }>();
 
-	let provider: Provider = {
+	const normalizeIssuer = (issuer: string) => issuer.trim().replace(/\/+$/, '');
+
+	const normalizedProviders: Record<string, Provider> = Object.fromEntries(
+		Object.entries(providers).map(([issuer, provider]) => [normalizeIssuer(issuer), provider])
+	);
+
+	let provider: Provider;
+
+	$: provider = normalizedProviders[normalizeIssuer(provider_issuer)] ?? {
 		name: provider_issuer,
 		logo: generic.logo
 	};
 
-	function selectProvider(e: Event) {
+	function selectProvider() {
 		dispatch('click', provider_issuer);
 	}
-
-	onMount(async () => {
-		if (provider_issuer in providers) {
-			provider = providers[provider_issuer];
-		}
-	});
 </script>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->

@@ -54,36 +54,33 @@ export const providers: Record<string, Provider> = {
 		name: 'NFDI Infrastructure Proxy',
 		logo: logo_nfdi_infra
 	},
-    'https://oidc.scc.kit.edu/auth/realms/kit': {
+	'https://oidc.scc.kit.edu/auth/realms/kit': {
 		name: 'KIT IdP',
 		logo: logo_kit
 	},
-    'https://fels.scc.kit.edu/oidc/realms/fels': {
-        name: 'KIT Fels',
-        logo: logo_kit
-    },
-    'https://proxy.myaccessid.org': {
-        name: 'MyAccessID',
-        logo: logo_generic
-    },
-    'https://auth.didmos.nfdi-aai.de': {
-        name: 'didmos',
-        logo: logo_generic
-    },
-    'https://keycloak.sso.gwdg.de/auth/realms/academiccloud': {
-        name: 'Academic ID',
-        logo: logo_generic
-    },
-    'https://login.aai.lifescience-ri.eu/oidc': {
-        name: 'LSAAI',
-        logo: logo_generic
-    }
+	'https://fels.scc.kit.edu/oidc/realms/fels': {
+		name: 'KIT Fels',
+		logo: logo_kit
+	},
+	'https://proxy.myaccessid.org': {
+		name: 'MyAccessID',
+		logo: logo_generic
+	},
+	'https://auth.didmos.nfdi-aai.de': {
+		name: 'didmos',
+		logo: logo_generic
+	},
+	'https://keycloak.sso.gwdg.de/auth/realms/academiccloud': {
+		name: 'Academic ID',
+		logo: logo_generic
+	},
+	'https://login.aai.lifescience-ri.eu/oidc': {
+		name: 'LSAAI',
+		logo: logo_generic
+	}
 };
 
 export const generic: Provider = {
 	name: 'OIDC Provider',
 	logo: logo_generic
 };
-
-
-

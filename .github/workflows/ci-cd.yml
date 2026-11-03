@@ -6,30 +6,38 @@ on:
       - 'main'
       - 'prerel'
     tags:
-      - v[0-9]+.[0-9]+.[0-9]+
+      - 'v*.*.*'
   pull_request:
     branches:
       - 'main'
+      - 'prerel'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
-  IMAGE_NAME: ${{ github.event.repository.name }}
+  IMAGE_NAME: sshoidc/webssh-oidc
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [21.x]
+        node-version: [22.x]
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Setup node
-        uses: actions/setup-node@master
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
       - name: Install dependencies
         run: |
-          npm install
+          corepack enable
           npm ci
       - name: Build
         run: npm run build
@@ -38,71 +46,116 @@ jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
     needs: build-and-test
-    # Temporarily disabled: Docker publishing moves to an org-level account
-    # after the repo transfer to ssh-oidc. Re-enable then.
-    if: false
+    if: >-
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'push' &&
+      (github.ref == 'refs/heads/prerel' || startsWith(github.ref, 'refs/tags/v')))
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v4
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+        uses: actions/checkout@v7
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          fetch-depth: 0
+      - name: Verify release tag is on main
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - name: Log in to Docker Hub
+        if: github.event_name == 'push'
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
       - name: Get Docker metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
-          images: ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
+            type=sha,prefix=sha-,format=short
             type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-') }}
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
+          target: runner
+          push: ${{ github.event_name == 'push' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VITE_LOG_LEVEL=info
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
   deploy:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     needs: build-and-push-image
-    # Temporarily disabled together with build-and-push-image (deploys the
-    # Docker image). Re-enable with the org-level Docker setup.
-    if: false
+    if: >-
+      github.event_name == 'push' &&
+      startsWith(github.ref, 'refs/tags/v') &&
+      !contains(github.ref_name, '-') &&
+      !contains(github.ref_name, '~')
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
     steps:
-      - name: Install deps
-        run: |
-          curl repo.data.kit.edu/repo-data-kit-edu-key.gpg \
-          | gpg --dearmor \
-          | sudo tee /etc/apt/trusted.gpg.d/kitrepo-archive.gpg
-          echo "deb [signed-by=/etc/apt/trusted.gpg.d/kitrepo-archive.gpg] https://repo.data.kit.edu//ubuntu/22.04 ./" \
-          | sudo tee -a /etc/apt/sources.list
-          echo "deb [signed-by=/etc/apt/trusted.gpg.d/kitrepo-archive.gpg] https://repo.data.kit.edu//ubuntu/jammy ./" \
-          | sudo tee -a /etc/apt/sources.list
-          sudo apt-get update
-          sudo apt-get install -y mytoken sshpass
-      - name: Get access token from mytoken
-        id: step_get_access_token
+      - name: Check out the repo
+        uses: actions/checkout@v7
+      - name: Configure SSH
         env:
-          MYTOKEN: ${{ secrets.HELMHOLTZ_MYTOKEN }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
         run: |
-          echo ACCESS_TOKEN=$(mytoken AT --MT-env MYTOKEN --scope openid) >> "$GITHUB_ENV"
-      - name: Connect to deployment VM
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Deploy webssh-oidc
         env:
-          SSHPASS: ${{ env.ACCESS_TOKEN }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          WEBSSH_HOST: ${{ vars.WEBSSH_HOST || 'webssh.ssh-oidc-cicd.vm.fedcloud.eu' }}
+          VERSION: ${{ github.ref_name }}
         run: |
-          TEMPFILE=$(mktemp)
-          echo ${{ secrets.DEPLOYMENT_HOST_KEY }} > $TEMPFILE
-          sshpass -P 'Access Token' -e ssh -o "UserKnownHostsFile $TEMPFILE" -p ${{ secrets.DEPLOYMENT_PORT }} ${{ secrets.DEPLOYMENT_USER }}@${{ secrets.DEPLOYMENT_HOST }} \
-            " \
-              echo '---> Pulling new docker image...' && \
-              docker pull ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }} && \
-              echo && echo '---> Rebuilding and restarting container with new image...' && \
-              cd motley_cue_docker && docker-compose up -d --no-deps --build ${{ env.IMAGE_NAME }} && \
-              echo && echo '---> Checking that the container is running...' && \
-              docker-compose ps ${{ env.IMAGE_NAME }} | grep Up  && exit 0 || exit 1 \
-            "
+          VERSION="${VERSION#v}"
+          ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "VERSION='$VERSION' flock -w 600 /tmp/webssh-oidc-deploy.lock sh -s" <<'EOF'
+          set -eu
+          cd /opt/webssh-oidc
+          git fetch --prune --tags origin
+          for f in docker/compose-oinit.yaml docker/compose.prod.yaml; do
+            git cat-file -e "v$VERSION:$f" || {
+              echo "ERROR: v$VERSION does not contain $f; not a deployable manifest." >&2
+              exit 1
+            }
+          done
+          git -c advice.detachedHead=false checkout --force --detach "v$VERSION"
+          git describe --exact-match --tags HEAD
+          if grep -q '^WEBSSH_TAG=' docker/.env; then
+            sed -i "s|^WEBSSH_TAG=.*|WEBSSH_TAG=$VERSION|" docker/.env
+          else
+            printf 'WEBSSH_TAG=%s\n' "$VERSION" >> docker/.env
+          fi
+          COMPOSE='docker compose -f docker/compose-oinit.yaml -f docker/compose.prod.yaml'
+          $COMPOSE pull webssh
+          $COMPOSE up -d --wait --no-deps webssh caddy
+          $COMPOSE ps
+          EOF
+          curl -fsS --retry 5 --retry-delay 5 --retry-all-errors \
+            -o /dev/null "https://$WEBSSH_HOST/"
+      - name: Show remote logs on failure
+        if: failure()
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd /opt/webssh-oidc && docker compose -f docker/compose-oinit.yaml -f docker/compose.prod.yaml logs --tail=100 webssh caddy" || true

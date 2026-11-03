@@ -1,14 +1,12 @@
 # Developing
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+Requires Node.js 22.13+, 24.x, or 26+. Install dependencies with `npm install`, then start a development server:
 
 ```bash
-Terminal 1: npm run dev
+npm run dev
 
 # or start the server and open the app in a new browser tab
-Terminal 1: npm run dev -- --open
-
-Terminal 2: npm run dev:ws (WebSocket server on port 8445)                                                                        
+npm run dev -- --open
 ```
 
 ## Building
@@ -27,13 +25,11 @@ You can preview the production build with `npm run preview`.
 npm run start
 ```
 
-## Build and run docker image
+## Run the docker image
 
-After building the app, you can build the docker image:
-
-```bash
-docker build -t webssh-oidc .
-```
+The application image is published as `sshoidc/webssh-oidc`. Compose uses the
+`latest` tag by default; use `WEBSSH_TAG=prerel` for the prerelease image or a
+version such as `WEBSSH_TAG=0.5.0` for a release.
 
 To run the docker image, you first need to configure the environment variables.
 
@@ -59,16 +55,35 @@ List of supported providers and their corresponding ids:
 - `didmos` for `https://auth.didmos.nfdi-aai.de`
 - `fels` for https://fels.scc.kit.edu/oidc/realms/fels`
 - `myaccessid` for `https://proxy.myaccessid.org`
+
 <!-- https://keycloak.sso.gwdg.de/auth/realms/academiccloud -->
 <!-- https://login.aai.lifescience-ri.eu/oidc -->
 
-You can then spin up a container with:
+You can then run the full stack (app + motley-cue + Caddy) with:
 
 ```bash
-docker-compose up
+docker compose -f docker/compose-pam.yaml pull
+docker compose -f docker/compose-pam.yaml up -d
 ```
 
-Check out the [motley_cue_docker](https://github.com/dianagudu/motley_cue_docker) repository for a complete example with motley-cue and ssh server.
+There are two stack variants, both using the published all-in-one motley_cue
+appliance image: `docker/compose-pam.yaml` (PAM token login) and
+`docker/compose-oinit.yaml` (oinit certificate login, with an oinit CA). The
+oinit variant needs a one-time host-key signing step — see
+[docker/README.md](docker/README.md).
+
+To try the prerelease image:
+
+```bash
+WEBSSH_TAG=prerel docker compose -f docker/compose-pam.yaml pull
+WEBSSH_TAG=prerel docker compose -f docker/compose-pam.yaml up -d
+```
+
+Or run only the infrastructure in Docker and the app on the host with
+`npm run dev` — see [docker/README.md](docker/README.md) for both workflows,
+remote-VM deployment, and troubleshooting. `docker/` bundles the motley_cue
+appliance configuration, the oinit CA configuration, and the Caddy
+configuration, so no separate repository/compose file is needed.
 
 If you're not using TLS (not recommended, only do this when you're running the code locally), set `NODE_ENV=development` in the `.env` file.
 

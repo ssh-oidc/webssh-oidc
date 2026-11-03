@@ -1,0 +1,157 @@
+# Full stack (oinit variant): Caddy + motley_cue all-in-one (oinit login) +
+# oinit CA + webssh-oidc.
+#
+# The motley_cue service is the official all-in-one appliance image
+# (sshoidc/motley-cue-allinone:<version>-oinit): motley_cue API + local_unix
+# account provisioning + sshd with oinit certificate login. The oinit CA
+# (sshoidc/oinit-ca) validates OIDC tokens against that appliance and signs
+# the short-lived SSH certificates; its hostgroup entries point at the
+# appliance (see docker/oinit-ca.ini).
+#
+# First start (the appliance refuses to run until the CA assets are in place):
+#   docker compose -f docker/compose-oinit.yaml up -d oinit-ca
+#   # generates the SSH CA keys on first start
+#   docker compose -f docker/compose-oinit.yaml run --rm \
+#       --entrypoint sh motley-cue /oinit-signup.sh
+#   # creates the host key, signs it with the CA and installs the CA assets
+#   docker compose -f docker/compose-oinit.yaml up -d
+#
+# OINIT_CA_TAG selects the oinit image version, MC_TAG the motley_cue image
+# version, WEBSSH_TAG the app image version.
+#
+# For a public host, add the production override (loopback-only app/CA ports,
+# publicly trusted TLS):
+#   docker compose -f docker/compose-oinit.yaml -f docker/compose.prod.yaml ...
+#
+# The PAM variant of the stack is docker/compose-pam.yaml.
+#
+# See docker/README.md for details.
+
+name: webssh-oidc-oinit
+
+services:
+  motley-cue:
+    image: sshoidc/motley-cue-allinone:${MC_TAG:-0.8.9}-oinit
+    hostname: motley-cue
+    restart: unless-stopped
+    ports:
+      # Published for direct SSH access/testing from the host.
+      - '1022:22'
+    environment:
+      MOTLEY_CUE_VARIANT: oinit
+      MOTLEY_CUE_CONFIG: /etc/motley_cue/motley_cue.conf
+      FEUDAL_ADAPTER_CONFIG: /etc/motley_cue/feudal_adapter.conf
+      # caddy reaches the API over the compose network.
+      BIND: 0.0.0.0:8080
+      # Principals used when signing the SSH host key (docker/oinit-signup.sh).
+      OINIT_SSH_HOSTS: ${OINIT_SSH_HOSTS:-motley-cue,localhost}
+    volumes:
+      - ./motley-cue-config/motley_cue.conf:/etc/motley_cue/motley_cue.conf:ro
+      - ./motley-cue-config/feudal_adapter.conf:/etc/motley_cue/feudal_adapter.conf:ro
+      # accounts, homes, SSH host keys, OTP token database
+      - motley_cue_state:/state
+      # read-only access to the CA keys, for signing the host key
+      - ca_state:/ca:ro
+      # one-shot helper for the signing step above
+      - ./oinit-signup.sh:/oinit-signup.sh:ro
+    healthcheck:
+      # The appliance image has no netcat; use its Python to probe the API.
+      test:
+        [
+          'CMD',
+          'python3',
+          '-c',
+          'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8080/", timeout=3)'
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  oinit-ca:
+    image: sshoidc/oinit-ca:${OINIT_CA_TAG:-latest}
+    hostname: oinit-ca
+    restart: unless-stopped
+    ports:
+      # Published for the host dev workflow and for the oinit CLI.
+      - '8082:8082'
+    volumes:
+      # generated CA key pairs (kept across restarts)
+      - ca_state:/etc/oinit
+      - ./${OINIT_CA_CONFIG:-oinit-ca.ini}:/etc/oinit/ca-config.ini:ro
+    # The image ships its own HEALTHCHECK (GET /health on :8082).
+
+  caddy:
+    image: caddy:2-alpine
+    hostname: caddy
+    restart: unless-stopped
+    extra_hosts:
+      # Lets Caddy reach webssh-oidc on the host in dev mode
+      # (npm run dev on :8444) and lets its healthcheck resolve the site.
+      - 'host.docker.internal:host-gateway'
+      - 'motley-cue.localhost:127.0.0.1'
+      - 'webssh-oidc.localhost:127.0.0.1'
+      - 'oinit-ca.localhost:127.0.0.1'
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      # Containerized webssh-oidc; docker/compose.dev.yaml overrides this
+      # with host.docker.internal:8444 for the npm run dev workflow.
+      WEBSSH_UPSTREAM: webssh:8444
+      # Override for a remote VM (see docker/README.md). Values are read
+      # from docker/.env / the shell, not from the repo-root .env.
+      WEBSSH_HOST: ${WEBSSH_HOST:-webssh-oidc.localhost}
+      MC_HOST: ${MC_HOST:-motley-cue.localhost}
+      OINIT_CA_HOST: ${OINIT_CA_HOST:-oinit-ca.localhost}
+    volumes:
+      - ./${CADDYFILE:-Caddyfile}:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      motley-cue:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://localhost/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  webssh:
+    image: sshoidc/webssh-oidc:${WEBSSH_TAG:-latest}
+    hostname: webssh
+    restart: unless-stopped
+    ports:
+      - '8444:8444'
+    # Single source of truth for both run modes. The values below are the
+    # container-internal ones and override ../.env (which is written for
+    # running the app on the host).
+    env_file:
+      - ../.env
+    environment:
+      INTERNAL_MC_ENDPOINT: http://caddy/motley_cue/
+      SSH_INTERNAL_HOSTNAME: motley-cue
+      SSH_PORT: '22'
+      # oinit certificate login through the CA on the compose network.
+      SSH_METHOD: oinit
+      OINIT_ENDPOINT: http://oinit-ca:8082/oinit/api/v1
+    volumes:
+      - ../config:/app/config
+      - ../config/docs:/app/build/client/docs
+    depends_on:
+      caddy:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'nc', '-z', 'localhost', '8444']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    stop_grace_period: 2s
+
+volumes:
+  motley_cue_state:
+  ca_state:
+  caddy_data:
+  caddy_config:

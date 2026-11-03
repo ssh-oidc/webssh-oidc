@@ -1,0 +1,20 @@
+# Keep the build context minimal: sources and lockfiles are all the builder
+# needs. Never ship local secrets or local state into an image layer.
+.git
+.github
+.gitignore
+.gitlab-ci.yml
+.gitlab-ci-scripts
+# Local secrets must never end up in a Docker layer.
+.env
+node_modules
+build
+.svelte-kit
+tests
+playwright.config.ts
+packaging
+docker
+.chglog.yml
+changelog.yml
+nfpm.yaml
+*.md

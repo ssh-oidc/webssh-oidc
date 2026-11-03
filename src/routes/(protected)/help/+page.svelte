@@ -35,11 +35,6 @@
 		.replace(/\/$/, '')} --token ${loginParams.accessToken} ssh -p ${
 		loginParams.sshInternalHost.port
 	} ${loginParams.sshInternalHost.hostname}`;
-	const mccliCmdOidcAgent = `mccli --mc-endpoint ${loginParams.mcEndpoint
-		.toString()
-		.replace(/\/$/, '')} --issuer ${loginParams.issuer} ssh -p ${
-		loginParams.sshInternalHost.port
-	} ${loginParams.sshInternalHost.hostname}`;
 
 	onMount(async () => {
 		if (!data.username) {
@@ -49,9 +44,9 @@
 			$uiBlock = false;
 		}
 		$uiBlock = false;
-        console.log('loginParams:', loginParams);
-        console.log('sshCmd:', sshCmd);
-        console.log('mccliCmd:', mccliCmd);
+		console.log('loginParams:', loginParams);
+		console.log('sshCmd:', sshCmd);
+		console.log('mccliCmd:', mccliCmd);
 	});
 </script>
 
@@ -62,13 +57,11 @@
 		login to an SSH server with OpenId Connect using the commandline:
 	</p>
 
-
 	<h2 class="text-xl font-semibold text-mc-gray dark:text-gray-300">1. ssh certificates</h2>
 
 	<p class="text-mc-gray dark:text-gray-300">
-		This tool uses SSH certificates signed by a CA instead of
-		traditional SSH keys. This provides short-lived credentials that are automatically issued based on
-		your OIDC identity.
+		This tool uses SSH certificates signed by a CA instead of traditional SSH keys. This provides
+		short-lived credentials that are automatically issued based on your OIDC identity.
 	</p>
 
 	{#if data.oinitPrivateKey && data.oinitCertificate}
@@ -98,13 +91,14 @@
 		<!-- Private Key -->
 		<div class="flex items-center gap-4">
 			<button
-				on:click={() => downloadFile(data.oinitPrivateKey, `id_ed25519_${loginParams.sshInternalHost.hostname}`)}
+				on:click={() =>
+					downloadFile(data.oinitPrivateKey!, `id_ed25519_${loginParams.sshInternalHost.hostname}`)}
 				class="bg-mc-blue-500 hover:bg-mc-blue-600 text-white font-semibold py-2 px-4 rounded whitespace-nowrap"
 			>
 				Download Private Key
 			</button>
 			<span class="text-mc-gray text-xs">
-				Save to: <span class="font-mono">~/.ssh/id_ed25519</span><br/>
+				Save to: <span class="font-mono">~/.ssh/id_ed25519</span><br />
 				<span class="font-mono">chmod 600 ~/.ssh/id_ed25519</span>
 			</span>
 			<div class="flex-1">
@@ -115,7 +109,11 @@
 		<!-- Certificate -->
 		<div class="flex items-center gap-4">
 			<button
-				on:click={() => downloadFile(data.oinitCertificate, `id_ed25519_${loginParams.sshInternalHost.hostname}-cert.pub`)}
+				on:click={() =>
+					downloadFile(
+						data.oinitCertificate!,
+						`id_ed25519_${loginParams.sshInternalHost.hostname}-cert.pub`
+					)}
 				class="bg-mc-blue-500 hover:bg-mc-blue-600 text-white font-semibold py-2 px-4 rounded whitespace-nowrap"
 			>
 				Download Certificate
@@ -127,23 +125,21 @@
 				<MyCodeArea label="Certificate:" id="oinitCertificate" value={data.oinitCertificate} />
 			</div>
 		</div>
-
 	{:else}
-		<p class="text-mc-gray text-sm italic">
-			oinit is not configured for this server.
-		</p>
+		<p class="text-mc-gray text-sm italic">oinit is not configured for this server.</p>
 	{/if}
-
 
 	<h2 class="text-xl font-semibold text-mc-gray dark:text-gray-300">2. oinit</h2>
 
-    <p class="text-mc-gray dark:text-gray-300">For easier access from the commandline, we
-    recommend to install the tools <span class="font-mono">oinit</span>
-    and <span class="font-mono">oidc-agent</span>:</p>
+	<p class="text-mc-gray dark:text-gray-300">
+		For easier access from the commandline, we recommend to install the tools <span
+			class="font-mono">oinit</span
+		>
+		and <span class="font-mono">oidc-agent</span>:
+	</p>
 	<ul class="list-disc list-inside text-mc-gray dark:text-gray-300">
 		<li>
-            Install the corresponding package repository for your linux
-            distribution. Details at:
+			Install the corresponding package repository for your linux distribution. Details at:
 			<a
 				href="https://repo.data.kit.edu"
 				target="_blank"
@@ -154,22 +150,23 @@
 			</a>
 		</li>
 		<li>
-            Install packages:<br/>
-			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="font-mono">yum -y install oinit oidc-agent</span><br/>
+			Install packages:<br />
+			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="font-mono">yum -y install oinit oidc-agent</span
+			><br />
 			&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="font-mono">apt -y install oinit oidc-agent</span>
-        </li>
-        <li>
-        Log in:
-		<MyCodeArea
-			label="SSH commands with oinit:"
-			id="oinitSshCmd"
-			open={true}
-			value={`oinit add ${loginParams.sshInternalHost.hostname}       # Tell oinit that ${loginParams.sshInternalHost.hosname} is under oinit control (only needed once)
+		</li>
+		<li>
+			Log in:
+			<MyCodeArea
+				label="SSH commands with oinit:"
+				id="oinitSshCmd"
+				open={true}
+				value={`oinit add ${loginParams.sshInternalHost.hostname}       # Tell oinit that ${loginParams.sshInternalHost.hostname} is under oinit control (only needed once)
 ssh -p ${loginParams.sshInternalHost.port} ${loginParams.sshInternalHost.hostname}`}
-		/>
-        </li>
-        <li>
-            Learn more at
+			/>
+		</li>
+		<li>
+			Learn more at
 			<a
 				href="https://ssh-oidc-doc.data.kit.edu"
 				target="_blank"
@@ -178,16 +175,17 @@ ssh -p ${loginParams.sshInternalHost.port} ${loginParams.sshInternalHost.hostnam
 			>
 				https://ssh-oidc-doc.data.kit.edu
 			</a>
-        </li>
-    </ul>
+		</li>
+	</ul>
 
-
-    <hr/>
+	<hr />
 	<h1 class="text-2xl font-semibold text-mc-gray dark:text-gray-300">Resources</h1>
-	<p class="text-mc-gray dark:text-gray-300">Here are some resources to help you get started with SSH-OIDC.</p>
+	<p class="text-mc-gray dark:text-gray-300">
+		Here are some resources to help you get started with SSH-OIDC.
+	</p>
 	<ul class="list-disc list-inside text-mc-gray dark:text-gray-300">
-        <li>
-            The documentation of ssh-oidc
+		<li>
+			The documentation of ssh-oidc
 			<a
 				href="https://ssh-oidc-doc.data.kit.edu"
 				target="_blank"
@@ -196,7 +194,7 @@ ssh -p ${loginParams.sshInternalHost.port} ${loginParams.sshInternalHost.hostnam
 			>
 				ssh-oidc-doc
 			</a>
-        </li>
+		</li>
 		<li>
 			The web client for ssh:
 			<a

@@ -1,6 +1,6 @@
 - semver: 0.2.4
   date: 2024-09-05T10:13:42.737831114+02:00
-  packager: ""
+  packager: ''
   changes:
     - commit: a1692da78b8bc9f390f694729e70af1a729a541c
       note: cicd boilerplate

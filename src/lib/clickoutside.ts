@@ -1,11 +1,11 @@
-export function clickOutside(node: Node) {
+export function clickOutside(node: Node, onOutsideClick?: () => void) {
 	// the node has been mounted in the DOM
 
 	window.addEventListener('click', handleClick);
 
 	function handleClick(e: { target: unknown }) {
 		if (!node.contains(e.target as Node)) {
-			node.dispatchEvent(new CustomEvent('outsideclick'));
+			onOutsideClick?.();
 		}
 	}
 

@@ -41,10 +41,12 @@
 		on:keydown={handleKeydown}
 		role="button"
 		tabindex="-1"
-	/>
+	></div>
 
 	<!-- Modal -->
-	<div class="fixed inset-x-4 top-4 bottom-auto max-h-[90vh] bg-white dark:bg-gray-800 rounded-lg shadow-xl z-50 flex flex-col overflow-hidden">
+	<div
+		class="fixed inset-x-4 top-4 bottom-auto max-h-[90vh] bg-white dark:bg-gray-800 rounded-lg shadow-xl z-50 flex flex-col overflow-hidden"
+	>
 		<!-- Header -->
 		<div class="flex items-center justify-between px-6 py-3 border-b dark:border-gray-600">
 			<h1 class="text-xl font-semibold text-mc-gray dark:text-gray-200">My Profile</h1>
@@ -58,11 +60,18 @@
 			<div class="flex flex-col gap-4">
 				<h2 class="text-2xl font-semibold text-mc-gray dark:text-gray-200">Welcome, {userName}!</h2>
 				<p class="text-mc-gray dark:text-gray-300">
-					You are logged in with the OIDC provider: <span class="font-semibold text-mc-orange">{issuer}</span>.
+					You are logged in with the OIDC provider: <span class="font-semibold text-mc-orange"
+						>{issuer}</span
+					>.
 					<br />
 					Your local username is: <span class="font-semibold text-mc-orange">{sshUser}</span>.
 				</p>
-				<MyCodeArea label="User info from OIDC provider" id="profileUserInfo" open={true} value={displayInfo} />
+				<MyCodeArea
+					label="User info from OIDC provider"
+					id="profileUserInfo"
+					open={true}
+					value={displayInfo}
+				/>
 			</div>
 		</div>
 

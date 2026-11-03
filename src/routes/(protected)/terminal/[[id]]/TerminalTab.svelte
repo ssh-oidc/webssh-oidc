@@ -16,7 +16,11 @@
 		{tabInfo.name}
 	</button>
 
-	<button class="px-2 hover:text-mc-orange" on:click={() => dispatch('closed', tabInfo)}>
+	<button
+		class="px-2 hover:text-mc-orange"
+		aria-label="Close terminal"
+		on:click={() => dispatch('closed', tabInfo)}
+	>
 		<svg class="w-4 h-auto" viewBox="0 0 20 20" fill="currentColor">
 			<path
 				fill-rule="evenodd"
