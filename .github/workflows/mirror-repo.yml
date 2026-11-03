@@ -16,6 +16,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Mirror to Helmholtz GitLab
+        if: ${{ !startsWith(github.event.ref, 'refs/heads/dependabot/') && !startsWith(github.event.ref, 'dependabot/') }}
         env:
           TARGET_URL: ${{ secrets.GITLAB_MIRROR_URL }}
           TARGET_USERNAME: ${{ secrets.GITLAB_MIRROR_USERNAME }}
